@@ -1,0 +1,106 @@
+[
+    {
+        "keywords": "ddos distributed denial of service attack overwhelm traffic flood server",
+        "question": "What is a DDoS attack?",
+        "answer": "A **DDoS (Distributed Denial of Service)** attack aims to overwhelm a server, service, or network with a flood of Internet traffic. Attackers often use botnets to send massive amounts of requests, rendering the target inaccessible to legitimate users.",
+        "mitre_id": "T1498",
+        "mitre_name": "Network Denial of Service",
+        "severity": "High"
+    },
+    {
+        "keywords": "phishing email credential theft fraud login fake fraudulent",
+        "question": "What is Phishing?",
+        "answer": "Phishing is a social engineering attack where attackers impersonate trusted entities (like banks or IT support) via email or messages. The goal is to trick victims into revealing sensitive information like login credentials, financial details, or PII.",
+        "mitre_id": "T1566",
+        "mitre_name": "Phishing",
+        "severity": "Medium"
+    },
+    {
+        "keywords": "malware virus trojan worm spyware ransomware malicious software",
+        "question": "What is Malware?",
+        "answer": "Malware (malicious software) describes any program or code that is harmful to systems. Common types include viruses, worms, Trojans, spyware, and ransomware. Malware is often delivered via phishing emails, malicious downloads, or software vulnerabilities.",
+        "mitre_id": "T1588",
+        "mitre_name": "Obtain Capabilities",
+        "severity": "Variable"
+    },
+    {
+        "keywords": "ransomware encrypt data files ransom payment locked",
+        "question": "What is Ransomware?",
+        "answer": "Ransomware is a type of malware that encrypts a victim's files. The attacker then demands a ransom from the victim to restore access to the data upon payment. Modern ransomware also threatens to leak data if the ransom is not paid (double extortion).",
+        "mitre_id": "T1486",
+        "mitre_name": "Data Encrypted for Impact",
+        "severity": "Critical"
+    },
+    {
+        "keywords": "sql injection sqli database query database manipulation vulnerability",
+        "question": "What is SQL Injection (SQLi)?",
+        "answer": "SQL Injection (SQLi) is a web security vulnerability that allows an attacker to interfere with the queries an application makes to its database. This can allow attackers to view, modify, or delete data they are not normally able to retrieve.",
+        "mitre_id": "T1190",
+        "mitre_name": "Exploit Public-Facing Application",
+        "severity": "High"
+    },
+    {
+        "keywords": "xss cross site scripting javascript malicious script browser client side",
+        "question": "What is Cross-Site Scripting (XSS)?",
+        "answer": "Cross-Site Scripting (XSS) attacks happen when an attacker injects malicious executable scripts into the code of a trusted application or website. The attack occurs when the victim visits the web page or web application that executes the malicious code.",
+        "mitre_id": "T1059",
+        "mitre_name": "Command and Scripting Interpreter",
+        "severity": "Medium"
+    },
+    {
+        "keywords": "brute force password guessing login attempts crack account",
+        "question": "What is a Brute Force Attack?",
+        "answer": "A brute force attack involves an attacker using a trial-and-error method to guess login information, encryption keys, or find a hidden web page. Automated tools are often used to try millions of password combinations in seconds.",
+        "mitre_id": "T1110",
+        "mitre_name": "Brute Force",
+        "severity": "Medium"
+    },
+    {
+        "keywords": "mitre att&ck framework tactics techniques matrix knowledge base adversarial behavior",
+        "question": "What is the MITRE ATT&CK Framework?",
+        "answer": "MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. It's used as a foundation for the development of specific threat models and methodologies in the private sector, government, and cybersecurity product and service community.",
+        "mitre_id": "N/A",
+        "mitre_name": "MITRE Framework",
+        "severity": "Info"
+    },
+    {
+        "keywords": "siem security information event management logging monitoring analysis correlation",
+        "question": "What is a SIEM?",
+        "answer": "SIEM (Security Information and Event Management) software gives security professionals both insight into and a track record of the activities within their IT environment. It combines SIM (information checks) and SEM (event analysis) functions into one security management system.",
+        "mitre_id": "N/A",
+        "mitre_name": "Security Tool",
+        "severity": "Info"
+    },
+    {
+        "keywords": "soc security operations center team monitoring response defense",
+        "question": "What is a SOC?",
+        "answer": "A Security Operations Center (SOC) is a centralized facility where information security issues (alarms, logs, etc.) are monitored, assessed, and defended on an ongoing basis. It typically involves people, processes, and technology.",
+        "mitre_id": "N/A",
+        "mitre_name": "Security Operations",
+        "severity": "Info"
+    },
+    {
+        "keywords": "zero trust architecture security model verify explicit never trust always verify",
+        "question": "What is Zero Trust?",
+        "answer": "Zero Trust is a security framework requiring all users, whether in or outside the organization's network, to be authenticated, authorized, and continuously validated for security configuration and posture before being granted or keeping access to applications and data.",
+        "mitre_id": "N/A",
+        "mitre_name": "Security Model",
+        "severity": "Info"
+    },
+    {
+        "keywords": "botnet zombie network devices command control c2 ddos",
+        "question": "What is a Botnet?",
+        "answer": "A botnet is a network of hijacked computer devices used to carry out various scams and cyberattacks. The term 'botnet' is a portmanteau formed from the words 'robot' and 'network'.",
+        "mitre_id": "T1583",
+        "mitre_name": "Acquire Infrastructure",
+        "severity": "High"
+    },
+    {
+        "keywords": "threat hunting proactive search detection unknown threats",
+        "question": "What is Threat Hunting?",
+        "answer": "Cyber threat hunting is a proactive security search through networks, endpoints, and datasets to hunt malicious, suspicious, or risky activities that have evaded detection by existing tools.",
+        "mitre_id": "N/A",
+        "mitre_name": "Defensive Technique",
+        "severity": "Info"
+    }
+]

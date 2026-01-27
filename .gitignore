@@ -1,3 +1,31 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+.env.development
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs
+dist/
+build/
+dist-ssr/
+*.tsbuildinfo
+
+# Python / AI Engine
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.pytest_cache/
+
 # Logs
 logs
 *.log
@@ -7,18 +35,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Testing & Coverage
+coverage/
+.nyc_output/
 
-# Editor directories and files
+# Editor & System
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+

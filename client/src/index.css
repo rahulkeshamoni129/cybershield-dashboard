@@ -1,0 +1,296 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* LIGHT MODE DEFAULTS */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11.2%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11.2%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11.2%;
+
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    /* Subtle accent for light mode */
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --info: 221.2 83.2% 53.3%;
+    --info-foreground: 210 40% 98%;
+
+    --critical: 330 81% 55%;
+    --critical-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11.2%;
+    --sidebar-primary: 221.2 83.2% 53.3%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221.2 83.2% 53.3%;
+
+    /* Glows - minimal for light */
+    --glow-primary: none;
+    --glow-secondary: none;
+    --glow-accent: none;
+    --glow-destructive: none;
+  }
+
+  .dark {
+    /* DARK MODE OVERRIDES */
+    --background: 232 45% 4%;
+    --foreground: 210 40% 98%;
+
+    --card: 232 45% 7%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 232 45% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 255 95% 68%;
+    --primary-foreground: 232 45% 4%;
+
+    --secondary: 190 100% 50%;
+    --secondary-foreground: 232 45% 4%;
+
+    --muted: 232 30% 15%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 150 100% 50%;
+    --accent-foreground: 232 45% 4%;
+
+    --destructive: 0 100% 65%;
+    --destructive-foreground: 210 40% 98%;
+
+    --sidebar-background: 232 45% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 255 95% 68%;
+    --sidebar-primary-foreground: 232 45% 4%;
+    --sidebar-accent: 232 30% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 232 30% 15%;
+    --sidebar-ring: 255 95% 68%;
+
+    /* Glows - visible for dark */
+    --glow-primary: 0 0 25px hsl(255 95% 68% / 0.3);
+    --glow-secondary: 0 0 25px hsl(190 100% 50% / 0.3);
+    --glow-accent: 0 0 25px hsl(150 100% 50% / 0.3);
+    --glow-destructive: 0 0 25px hsl(0 100% 65% / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased transition-colors duration-300;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Dark mode specific background pattern */
+  .dark body {
+    background-image:
+      radial-gradient(circle at 50% 0%, hsl(255 95% 68% / 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 0% 50%, hsl(190 100% 50% / 0.03) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+
+  /* Light mode specific background */
+  :root:not(.dark) body {
+    background-color: hsl(210 20% 98%);
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+
+  /* Premium Glass Card */
+  .soc-card {
+    @apply bg-white border border-gray-200 rounded-xl p-5 shadow-sm transition-all duration-300;
+  }
+
+  /* Dark mode glass effect overrides */
+  .dark .soc-card {
+    @apply bg-card/60 border-white/5 backdrop-blur-md shadow-2xl;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.05);
+    /* Explicit border for dark */
+  }
+
+  .soc-card:hover {
+    @apply transform -translate-y-[2px] shadow-md;
+  }
+
+  .dark .soc-card:hover {
+    @apply border-white/10 bg-card/70;
+    box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.5);
+  }
+
+  .soc-card-glow {
+    @apply soc-card shadow-lg;
+  }
+
+  .dark .soc-card-glow {
+    box-shadow:
+      inset 0 1px 0 0 hsl(var(--border)),
+      0 0 20px -5px hsl(var(--primary) / 0.2);
+  }
+
+  /* Threat Level Badges */
+  .threat-badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-semibold border transition-all duration-300;
+  }
+
+  .dark .threat-badge {
+    @apply backdrop-blur-sm;
+  }
+
+  .threat-critical {
+    @apply threat-badge bg-red-100 text-red-700 border-red-200;
+  }
+
+  .dark .threat-critical {
+    @apply bg-critical/10 text-critical border-critical/20;
+    box-shadow: 0 0 10px hsl(var(--critical) / 0.2);
+  }
+
+  .threat-high {
+    @apply threat-badge bg-destructive/10 text-destructive border-destructive/20;
+  }
+
+  .dark .threat-high {
+    box-shadow: 0 0 10px hsl(var(--destructive) / 0.2);
+  }
+
+  .threat-medium {
+    @apply threat-badge bg-warning/10 text-warning border-warning/20;
+  }
+
+  .dark .threat-medium {
+    box-shadow: 0 0 10px hsl(var(--warning) / 0.2);
+  }
+
+  .threat-low {
+    @apply threat-badge bg-info/10 text-info border-info/20;
+  }
+
+  .threat-safe {
+    @apply threat-badge bg-accent/10 text-accent border-accent/20;
+  }
+
+  .dark .threat-safe {
+    box-shadow: 0 0 10px hsl(var(--accent) / 0.2);
+  }
+
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full ring-2 ring-background;
+  }
+
+  .status-online {
+    @apply status-dot bg-accent;
+  }
+
+  .dark .status-online {
+    box-shadow: 0 0 10px hsl(var(--accent));
+  }
+
+  .status-offline {
+    @apply status-dot bg-muted-foreground;
+  }
+
+  .status-warning {
+    @apply status-dot bg-warning;
+  }
+
+  .dark .status-warning {
+    box-shadow: 0 0 8px hsl(var(--warning));
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-background/80 backdrop-blur-sm border border-border;
+  }
+
+  .dark .glass {
+    @apply backdrop-blur-xl bg-background/60 border-white/5;
+  }
+
+  .scrollbar-soc::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-soc::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-soc::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  .scrollbar-soc::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+  }
+
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 16px hsl(var(--primary) / 0.6);
+  }
+}
+
+@keyframes scan {
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 200%;
+  }
+}
