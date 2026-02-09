@@ -35,6 +35,33 @@ router.post('/register', async (req, res) => {
     }
 });
 
+const { protect } = require('../middleware/authMiddleware');
+
+router.get('/test', (req, res) => res.json({ message: 'Auth router is working' }));
+
+router.post('/changepassword', protect, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+        // Prevent password changes for mock users
+        if (req.user._id && typeof req.user._id === 'string' && req.user._id.startsWith('mock-')) {
+            return res.status(400).json({ message: 'Password changes are not allowed for demo/mock accounts.' });
+        }
+
+        const user = await User.findById(req.user._id);
+
+        if (user && (await user.matchPassword(currentPassword))) {
+            user.password = newPassword;
+            await user.save();
+            res.json({ message: 'Password updated successfully' });
+        } else {
+            res.status(401).json({ message: 'Invalid current password' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 

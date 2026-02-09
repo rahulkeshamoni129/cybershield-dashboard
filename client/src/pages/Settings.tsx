@@ -19,12 +19,75 @@ const Settings = () => {
     const [pushNotifications, setPushNotifications] = useState(false);
     const [securityAlerts, setSecurityAlerts] = useState(true);
     const [twoFactor, setTwoFactor] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
     const handleSave = () => {
         toast({
             title: "Settings Updated",
             description: "Your preferences have been saved successfully.",
         });
+    };
+
+    const handlePasswordChange = async () => {
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            toast({
+                title: "Error",
+                description: "Please fill in all password fields.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            toast({
+                title: "Error",
+                description: "New passwords do not match.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsUpdatingPassword(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/auth/changepassword', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                toast({
+                    title: "Success",
+                    description: "Password updated successfully.",
+                });
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+            } else {
+                toast({
+                    title: "Error",
+                    description: data.message || "Failed to update password.",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "An error occurred while updating password.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsUpdatingPassword(false);
+        }
     };
 
     return (
@@ -180,11 +243,29 @@ const Settings = () => {
                                 <CardDescription>Manage your password and authentication methods</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="space-y-2">
+                                <div className="space-y-4">
                                     <Label>Change Password</Label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <Input type="password" placeholder="Current Password" />
-                                        <Input type="password" placeholder="New Password" />
+                                    <div className="grid grid-cols-1 gap-4">
+                                        <Input
+                                            type="password"
+                                            placeholder="Current Password"
+                                            value={currentPassword}
+                                            onChange={(e) => setCurrentPassword(e.target.value)}
+                                        />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <Input
+                                                type="password"
+                                                placeholder="New Password"
+                                                value={newPassword}
+                                                onChange={(e) => setNewPassword(e.target.value)}
+                                            />
+                                            <Input
+                                                type="password"
+                                                placeholder="Confirm New Password"
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between pt-4 border-t border-border">
@@ -194,19 +275,14 @@ const Settings = () => {
                                     </div>
                                     <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
                                 </div>
-                                <div className="flex items-center justify-between pt-4 border-t border-border">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base">Active Sessions</Label>
-                                        <p className="text-sm text-muted-foreground">Manage devices where you are logged in</p>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="flex items-center gap-2">
-                                        <Globe className="h-4 w-4" />
-                                        View Sessions
-                                    </Button>
-                                </div>
                             </CardContent>
                             <CardFooter>
-                                <Button onClick={handleSave}>Update Security Settings</Button>
+                                <Button
+                                    onClick={handlePasswordChange}
+                                    disabled={isUpdatingPassword}
+                                >
+                                    {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                                </Button>
                             </CardFooter>
                         </Card>
                     </TabsContent>
