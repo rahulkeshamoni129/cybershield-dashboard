@@ -8,13 +8,13 @@ const users = [
     {
         username: 'Admin User',
         email: 'admin@cybershield.io',
-        password: 'adminpassword123',
+        password: process.env.DEFAULT_ADMIN_PASSWORD || 'adminpassword123',
         role: 'admin'
     },
     {
         username: 'SOC Analyst',
         email: 'analyst@cybershield.io',
-        password: 'analystpassword123',
+        password: process.env.DEFAULT_ANALYST_PASSWORD || 'analystpassword123',
         role: 'user'
     }
 ];
@@ -36,10 +36,10 @@ const seedUsers = async () => {
         console.log('Users seeded successfully');
         console.log('-----------------------------------');
         console.log('Admin Email: admin@cybershield.io');
-        console.log('Admin Password: adminpassword123');
+        console.log(`Admin Password: ${process.env.DEFAULT_ADMIN_PASSWORD || 'adminpassword123'}`);
         console.log('-----------------------------------');
         console.log('Analyst Email: analyst@cybershield.io');
-        console.log('Analyst Password: analystpassword123');
+        console.log(`Analyst Password: ${process.env.DEFAULT_ANALYST_PASSWORD || 'analystpassword123'}`);
         console.log('-----------------------------------');
 
         process.exit();

@@ -11,7 +11,13 @@ const ThreatSchema = new mongoose.Schema({
     ipFrom: String,
     ipTo: String,
     severity: Number,
-    details: Object
+    details: Object,
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        index: { expires: 86400 } // Delete after 24 hours
+    }
 });
 
 module.exports = mongoose.model('Threat', ThreatSchema);
+

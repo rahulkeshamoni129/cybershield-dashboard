@@ -29,9 +29,6 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
 
-// Database Connection
-connectDB();
-
 // Redis Client
 const redisClient = createClient({
     url: process.env.REDIS_URL || 'redis://redis:6379'
@@ -51,10 +48,6 @@ const io = new Server(server, {
     }
 });
 
-// Initialize Socket Manager (Real-time Engine)
-socketManager(io, redisClient);
-
-// Routes
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes are protected internally by the route handlers
@@ -77,6 +70,24 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+
+// Start Server Wrapper
+const startServer = async () => {
+    try {
+        // Database Connection
+        await connectDB();
+
+        // Initialize Socket Manager (Real-time Engine) after DB attempt
+        // Ideally we only run this if DB connected, or make it resilient
+        socketManager(io, redisClient);
+
+        server.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error('Failed to start server:', err);
+        process.exit(1);
+    }
+};
+
+startServer();

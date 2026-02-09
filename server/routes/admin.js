@@ -90,13 +90,26 @@ router.get('/logs', protect, requireRole('admin'), (req, res) => {
 // Get System Health (including User Count)
 router.get('/system-health', protect, requireRole('admin'), async (req, res) => {
     try {
+        const os = require('os');
         const userCount = await User.countDocuments({});
+
+        // Calculate Real Memory Usage
+        const totalMem = os.totalmem();
+        const freeMem = os.freemem();
+        // Return structured data
         res.json({
-            status: 'Healthy',
-            uptime: process.uptime(),
-            memoryUsage: process.memoryUsage(),
-            cpuLoad: [0.5, 0.3, 0.1],
-            userCount: userCount
+            status: 'Healthy', // This is still subjective, but you could add logic (e.g. if FreeMem < 10% => 'Critical')
+            uptime: os.uptime(),
+            memoryUsage: {
+                rss: (totalMem - freeMem), // Resident Set Size (Approximated as Used Mem)
+                heapTotal: totalMem,
+                heapUsed: totalMem - freeMem,
+                external: 0
+            },
+            cpuLoad: os.loadavg(), // Returns [1min, 5min, 15min] averages
+            userCount: userCount,
+            platform: os.platform(),
+            architecture: os.arch()
         });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching system health' });

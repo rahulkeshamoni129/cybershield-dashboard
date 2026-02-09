@@ -5,8 +5,12 @@ import ThreatMap from '@/components/dashboard/ThreatMap';
 import AlertFeed from '@/components/dashboard/AlertFeed';
 import AttackChart from '@/components/dashboard/AttackChart';
 import AttackTypePie from '@/components/dashboard/AttackTypePie';
-import TopSourcesTable from '@/components/dashboard/TopSourcesTable';
-import SystemHealth from '@/components/dashboard/SystemHealth';
+import TopCountriesChart from '@/components/dashboard/TopCountriesChart';
+import SeverityChart from '@/components/dashboard/SeverityChart';
+import RiskHeatmap from '@/components/dashboard/RiskHeatmap';
+
+import MitreAttackChart from '@/components/dashboard/MitreAttackChart';
+import ConfidenceScoreChart from '@/components/dashboard/ConfidenceScoreChart';
 import {
   Shield,
   AlertTriangle,
@@ -23,23 +27,106 @@ import {
   Threat,
   Alert,
   getCountryCoordinates,
-  threatTrendData,
 } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
 
 const Dashboard = () => {
-  const [threats, setThreats] = useState<Threat[]>([]);
+  const { token } = useAuth();
+  const [threats, setThreats] = useState<Threat[]>([]); // Real-time feed events
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [stats, setStats] = useState(dashboardStats);
+  const [stats, setStats] = useState({
+    totalThreats: 0,
+    activeThreats: 0,
+    blockedAttacks: 0,
+    systemHealth: 98,
+    criticalAlerts: 0,
+    globalRiskScore: 0
+  });
+
+  // Charts Data
   const [typeDistribution, setTypeDistribution] = useState<{ name: string; value: number; color?: string }[]>([]);
-  const [topSources, setTopSources] = useState<{ country: string; attacks: number }[]>([]);
-  const [trendData, setTrendData] = useState<any[]>(threatTrendData);
+  const [topSources, setTopSources] = useState<{ country: string; count: number }[]>([]);
+  const [trendData, setTrendData] = useState<{ time: string; threats: number }[]>([]);
+  const [severityDist, setSeverityDist] = useState<{ name: string; value: number }[]>([]);
+  const [mitreData, setMitreData] = useState<{ name: string; value: number; fill: string }[]>([]);
+  const [confidenceData, setConfidenceData] = useState<{ range: number; count: number }[]>([]);
 
+  // Colors for charts
+  const TYPE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+  // Fetch Historical Data from Backend (API)
   useEffect(() => {
-    // Initial load
-    setThreats(generateThreats(50));
-    setAlerts(generateAlerts(20));
+    const fetchAnalytics = async () => {
+      try {
+        const res = await fetch('/api/analytics', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
 
-    // Connect to WebSocket
+        // 1. Core Stats
+        setStats(prev => ({
+          ...prev,
+          totalThreats: data.totalAttacks || 0,
+          globalRiskScore: data.globalRiskScore || 0,
+          // Keep other simulated stats for liveness
+          activeThreats: Math.floor(Math.random() * 20) + 5
+        }));
+
+        // 2. Trend Data
+        if (data.trendData) {
+          setTrendData(data.trendData);
+        }
+
+        // 3. Top Countries (Object -> Array)
+        if (data.topSources) {
+          const sources = Object.entries(data.topSources)
+            .map(([country, count]) => ({ country, count: Number(count) }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+          setTopSources(sources);
+        }
+
+        // 4. Attack Types (Object -> Array)
+        if (data.attacksByType) {
+          const types = Object.entries(data.attacksByType)
+            .map(([name, value], i) => ({
+              name,
+              value: Number(value),
+              color: TYPE_COLORS[i % TYPE_COLORS.length]
+            }));
+          setTypeDistribution(types);
+        }
+
+        // 5. Severity (Object -> Array)
+        if (data.severityDistribution) {
+          const sev = Object.entries(data.severityDistribution).map(([name, value]) => ({
+            name,
+            value: Number(value)
+          }));
+          setSeverityDist(sev);
+        }
+
+        // 6. MITRE Data (Array -> Array)
+        if (data.mitreData) {
+          setMitreData(data.mitreData);
+        }
+
+        // 7. Confidence Histogram (Array)
+        if (data.confidenceHistogram) {
+          setConfidenceData(data.confidenceHistogram);
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      }
+    };
+
+    fetchAnalytics();
+  }, [token]);
+
+  // Socket Connection for Real-Time Updates
+  useEffect(() => {
+    // Connect silently
     const socket = io('/', {
       path: '/socket.io',
       transports: ['websocket'],
@@ -50,31 +137,34 @@ const Dashboard = () => {
     });
 
     socket.on('dashboard_stats', (data: any) => {
+      // Merge Core Stats
       setStats(prev => ({
         ...prev,
-        totalThreats: data.totalThreats,
-        activeThreats: data.activeThreats,
-        blockedAttacks: data.blockedAttacks,
-        criticalAlerts: data.criticalAlerts,
-        systemHealth: data.systemHealth
+        ...data,
+        // Ensure we don't overwrite if not present
+        totalThreats: data.totalThreats || prev.totalThreats,
+        globalRiskScore: data.globalRiskScore || prev.globalRiskScore
       }));
 
-      // Transform distribution for Pie Chart
-      const distArray = Object.keys(data.typeDistribution).map((key, index) => ({
-        name: key,
-        value: data.typeDistribution[key],
-        color: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'][index % 6]
-      }));
-      setTypeDistribution(distArray);
-
-      // Transform Top Sources for Table
+      // Update incremental data mappings
       if (data.topSources) {
-        const sourcesArray = Object.keys(data.topSources)
-          .map(country => ({ country, attacks: data.topSources[country] }))
-          .sort((a, b) => b.attacks - a.attacks)
-          .slice(0, 5); // Top 5
-        setTopSources(sourcesArray);
+        const sources = Object.entries(data.topSources)
+          .map(([country, count]) => ({ country, count: Number(count) }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+        setTopSources(sources);
       }
+
+      if (data.typeDistribution) {
+        const types = Object.entries(data.typeDistribution)
+          .map(([name, value], i) => ({
+            name,
+            value: Number(value),
+            color: TYPE_COLORS[i % TYPE_COLORS.length]
+          }));
+        setTypeDistribution(types);
+      }
+
     });
 
     socket.on('attack_event', (attack: any) => {
@@ -111,30 +201,52 @@ const Dashboard = () => {
 
       setThreats((prev) => [newThreat, ...prev].slice(0, 50));
 
-      // Update Trend Data (Simulate real-time by adding to the last hour)
+      // Update trend chart for current hour
+      const currentHour = new Date().getHours();
       setTrendData(prev => {
-        const newData = [...prev];
-        const lastIdx = newData.length - 1;
-        const severityKey = attack.severity >= 9 ? 'critical' : attack.severity >= 7 ? 'high' : attack.severity >= 4 ? 'medium' : 'low';
-
-        if (!newData[lastIdx][severityKey]) newData[lastIdx][severityKey] = 0;
-        newData[lastIdx][severityKey]++;
-
-        // Also fluctuate 'threats' count for visual effect if used
-        if (!newData[lastIdx].threats) newData[lastIdx].threats = 0;
-        newData[lastIdx].threats++;
-
-        return newData;
+        const updated = [...prev];
+        const hourEntry = updated.find(t => t.time === `${currentHour}:00`);
+        if (hourEntry) {
+          hourEntry.threats += 1;
+        }
+        return updated;
       });
 
-      // Also add an alert occasionally
+      // Increment top country count locally for instant feedback
+      setTopSources(prev => {
+        const newSources = [...prev];
+        const idx = newSources.findIndex(s => s.country === attack.sourceCountry);
+        if (idx !== -1) {
+          newSources[idx].count += 1;
+        } else {
+          newSources.push({ country: attack.sourceCountry, count: 1 });
+        }
+        return newSources.sort((a, b) => b.count - a.count).slice(0, 10);
+      });
+
+      // Increment type distribution locally
+      setTypeDistribution(prev => {
+        const newTypes = [...prev];
+        const typeName = attack.attackType || 'Unknown';
+        const idx = newTypes.findIndex(t => t.name === typeName);
+        if (idx !== -1) {
+          newTypes[idx].value += 1;
+        } else {
+          newTypes.push({ name: typeName, value: 1, color: '#82ca9d' });
+        }
+        return newTypes;
+      });
+
+      // Alerts Logic
       if (attack.severity > 7) {
         const newAlert: Alert = {
           id: `alert-${Date.now()}`,
           title: `${attack.attackType} from ${attack.sourceCountry}`,
           severity: 'critical',
           timestamp: new Date(),
-          description: `High severity attack detected targeting ${attack.destinationCountry}`
+          description: `High severity attack detected targeting ${attack.destinationCountry}`,
+          source: attack.ipFrom,
+          status: 'new'
         };
         setAlerts(prev => [newAlert, ...prev].slice(0, 20));
       }
@@ -147,90 +259,89 @@ const Dashboard = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-8">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold gradient-text">Security Operations Center</h1>
             <p className="text-muted-foreground mt-1">
-              Real-time threat monitoring and analysis
+              Global Threat Intelligence & Analytics Dashboard
             </p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/10 border border-accent/30">
-            <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            <span className="text-accent font-medium">All Systems Operational</span>
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2"
+            >
+              <Activity className="w-3 h-3" />
+              Refresh Data
+            </button>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/10 border border-accent/30">
+              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <span className="text-accent font-medium text-sm">Live Monitoring Active</span>
+            </div>
           </div>
         </div>
 
-        {/* Stats Row */}
+        {/* 1. KPI Tiles (Heads-Up Display) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          <StatCard
-            title="Total Threats"
-            value={stats.totalThreats}
-            icon={Shield}
-            trend={{ value: 12, isPositive: false }}
-            variant="primary"
-          />
-          <StatCard
-            title="Active Threats"
-            value={stats.activeThreats}
-            icon={Target}
-            trend={{ value: 5, isPositive: false }}
-            variant="destructive"
-          />
-          <StatCard
-            title="Blocked Attacks"
-            value={stats.blockedAttacks}
-            icon={ShieldCheck}
-            trend={{ value: 18, isPositive: true }}
-            variant="accent"
-          />
-          <StatCard
-            title="System Health"
-            value={`${stats.systemHealth}%`}
-            icon={Activity}
-            variant="primary"
-          />
-          <StatCard
-            title="Critical Alerts"
-            value={stats.criticalAlerts}
-            icon={AlertTriangle}
-            variant="destructive"
-          />
-          <StatCard
-            title="Events/min"
-            value={Math.floor(Math.random() * 500) + 200}
-            icon={Zap}
-            variant="warning"
+          <StatCard title="Total Threats" value={stats.totalThreats.toLocaleString()} icon={Shield} trend={{ value: 12, isPositive: false }} variant="primary" />
+          <StatCard title="Active Threats" value={stats.activeThreats} icon={Target} trend={{ value: 5, isPositive: false }} variant="destructive" />
+          <StatCard title="Blocked Attacks" value={stats.blockedAttacks.toLocaleString()} icon={ShieldCheck} trend={{ value: 18, isPositive: true }} variant="accent" />
+          <StatCard title="Global Risk Score" value={`${stats.globalRiskScore}/100`} icon={Activity} variant={stats.globalRiskScore > 50 ? "destructive" : "primary"} />
+          <StatCard title="Critical Alerts" value={stats.criticalAlerts} icon={AlertTriangle} variant="destructive" />
+          <StatCard title="Events/min" value={Math.floor(Math.random() * 500) + 200} icon={Zap} variant="warning" />
+        </div>
+
+
+
+        {/* 3. Global Threat Map: Full Width */}
+        <div className="w-full">
+          <ThreatMap threats={threats} />
+        </div>
+
+        {/* 3. Timeline: Full Width for Granularity */}
+        <div className="h-[350px]">
+          <AttackChart data={trendData} />
+        </div>
+
+        {/* 4. Analytics Grid: Categorical Breakdowns */}
+        {/* 4. Analytics Grid: 2x2 Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-[350px]">
+            <AttackTypePie data={typeDistribution} />
+          </div>
+          <div className="h-[350px]">
+            <SeverityChart distribution={severityDist} />
+          </div>
+          <div className="h-[350px]">
+            <MitreAttackChart data={mitreData} />
+          </div>
+          <div className="h-[350px]">
+            <ConfidenceScoreChart distribution={confidenceData} />
+          </div>
+        </div>
+
+        {/* 5. Global Risk Matrix: Full Width */}
+        <div className="w-full">
+          <RiskHeatmap
+            topCountries={topSources}
+            severityDistribution={severityDist.reduce((acc, curr) => ({ ...acc, [curr.name]: curr.value }), {})}
+            totalThreats={stats.totalThreats}
           />
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Threat Map - Takes 2 columns */}
-          <div className="xl:col-span-2">
-            <ThreatMap threats={threats} />
-          </div>
-
-          {/* Alert Feed */}
-          <div className="xl:col-span-1">
+        {/* 6. Real-Time Insights: Alerts & Sources (Moved to Bottom) */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="h-full">
             <AlertFeed alerts={alerts} />
           </div>
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <AttackChart data={trendData} />
+          <div className="h-full">
+            <TopCountriesChart data={topSources} />
           </div>
-          <AttackTypePie data={typeDistribution} />
         </div>
 
-        {/* Bottom Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TopSourcesTable data={topSources} />
-          <SystemHealth />
-        </div>
+
       </div>
     </MainLayout>
   );

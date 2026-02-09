@@ -36,6 +36,8 @@ export interface Alert {
     severity: 'low' | 'medium' | 'high' | 'critical';
     timestamp: Date;
     description: string;
+    source?: string;
+    status?: 'new' | 'investigating' | 'resolved';
 }
 
 export const dashboardStats = {
@@ -54,11 +56,27 @@ const COUNTRIES: Record<string, [number, number]> = {
     'BR': [-14.2350, -51.9253],
     'DE': [51.1657, 10.4515],
     'UK': [55.3781, -3.4360],
+    'GB': [55.3781, -3.4360], // United Kingdom
     'FR': [46.2276, 2.2137],
     'JP': [36.2048, 138.2529],
     'KR': [35.9078, 127.7669],
     'AU': [-25.2744, 133.7751],
     'CA': [56.1304, -106.3468],
+    'NL': [52.1326, 5.2913], // Netherlands
+    'SG': [1.3521, 103.8198], // Singapore
+    'RO': [45.9432, 24.9668], // Romania
+    'HK': [22.3193, 114.1694], // Hong Kong
+    'ID': [-0.7893, 113.9213], // Indonesia
+    'VN': [14.0583, 108.2772], // Vietnam
+    'UA': [48.3794, 31.1656], // Ukraine
+    'IT': [41.8719, 12.5674], // Italy
+    'ES': [40.4637, -3.7492], // Spain
+    'TW': [23.6978, 120.9605], // Taiwan
+    'PL': [51.9194, 19.1451], // Poland
+    'IR': [32.4279, 53.6880], // Iran
+    'KP': [40.3399, 127.5101], // North Korea
+    'TR': [38.9637, 35.2433], // Turkey
+    'IL': [31.0461, 34.8516], // Israel
 };
 
 const ATTACK_TYPES = ['DDoS', 'SQL Injection', 'Brute Force', 'Malware', 'Phishing', 'XSS'];
@@ -99,7 +117,7 @@ export const generateThreats = (count: number): Threat[] => {
             },
             mitreTactic: 'Initial Access',
             mitreId: 'T1078',
-            dataSource: 'Simulation'
+            dataSource: Math.random() > 0.5 ? 'AlienVault Reflected' : 'Mock Data'
         };
     });
 };

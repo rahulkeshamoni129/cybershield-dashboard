@@ -20,7 +20,7 @@ const restoreAdmin = async () => {
             console.log('Admin user found. Resetting role and password...');
             adminUser.username = 'Admin'; // Ensure username is correct too
             adminUser.role = 'admin';
-            adminUser.password = 'adminpassword123';
+            adminUser.password = process.env.DEFAULT_ADMIN_PASSWORD || 'adminpassword123';
             // The User model's pre-save hook checks isModified('password') and hashes it
             await adminUser.save();
             console.log('Admin user updated successfully.');
@@ -29,7 +29,7 @@ const restoreAdmin = async () => {
             await User.create({
                 username: 'Admin',
                 email: adminEmail,
-                password: 'adminpassword123',
+                password: process.env.DEFAULT_ADMIN_PASSWORD || 'adminpassword123',
                 role: 'admin'
             });
             console.log('Admin user created successfully.');
@@ -37,7 +37,7 @@ const restoreAdmin = async () => {
 
         console.log('-----------------------------------');
         console.log('Admin Email: admin@cybershield.io');
-        console.log('Admin Password: adminpassword123');
+        console.log(`Admin Password: ${process.env.DEFAULT_ADMIN_PASSWORD || 'adminpassword123'}`);
         console.log('-----------------------------------');
 
         process.exit(0);

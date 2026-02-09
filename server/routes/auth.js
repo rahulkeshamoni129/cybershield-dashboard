@@ -40,7 +40,7 @@ router.post('/login', async (req, res) => {
 
     try {
         // HARDCODED FALLBACK: Always allow this user
-        if (email === 'analyst@cybershield.io' && password === 'analystpassword123') {
+        if (email === 'analyst@cybershield.io' && password === (process.env.DEFAULT_ANALYST_PASSWORD || 'analyst123')) {
             return res.json({
                 _id: 'mock-analyst-id',
                 username: 'Analyst User',
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
         // Fallback for Demo Mode (if DB is down)
         if (mongoose.connection.readyState !== 1) {
             console.log('DB Offline: Attempting Demo Login');
-            if (email === 'admin@cybershield.io' && password === 'admin123') {
+            if (email === 'admin@cybershield.io' && password === (process.env.DEFAULT_ADMIN_PASSWORD || 'admin123')) {
                 return res.json({
                     _id: 'mock-admin-id',
                     username: 'Admin User',
@@ -63,7 +63,7 @@ router.post('/login', async (req, res) => {
                     role: 'admin'
                 });
             }
-            if (email === 'analyst@cybershield.io' && password === 'analyst123') {
+            if (email === 'analyst@cybershield.io' && password === (process.env.DEFAULT_ANALYST_PASSWORD || 'analyst123')) {
                 return res.json({
                     _id: 'mock-analyst-id',
                     username: 'Analyst User',
@@ -87,20 +87,20 @@ router.post('/login', async (req, res) => {
 
         // Auto-create Admin/Analyst for convenience if they don't exist
         if (!user) {
-            if (email === 'admin@cybershield.io' && password === 'admin123') {
+            if (email === 'admin@cybershield.io' && password === (process.env.DEFAULT_ADMIN_PASSWORD || 'admin123')) {
                 console.log('Seed: Creating Admin User');
                 user = await User.create({
                     username: 'Admin User',
                     email: 'admin@cybershield.io',
-                    password: 'admin123',
+                    password: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123',
                     role: 'admin'
                 });
-            } else if (email === 'analyst@cybershield.io' && password === 'analyst123') {
+            } else if (email === 'analyst@cybershield.io' && password === (process.env.DEFAULT_ANALYST_PASSWORD || 'analyst123')) {
                 console.log('Seed: Creating Analyst User');
                 user = await User.create({
                     username: 'Analyst User',
                     email: 'analyst@cybershield.io',
-                    password: 'analyst123',
+                    password: process.env.DEFAULT_ANALYST_PASSWORD || 'analyst123',
                     role: 'user'
                 });
             }

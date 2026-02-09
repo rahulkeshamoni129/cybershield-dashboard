@@ -62,18 +62,28 @@ const scan = (target, onDeviceFound, onComplete, onError) => {
     // -oG - : Grepable output to stdout
     const nmapResults = [];
     let nmap;
+    let scanFinished = false;
+
+    const finishScan = (data, isError = false) => {
+        if (scanFinished) return;
+        scanFinished = true;
+        if (isError) {
+            if (onError) onError(data);
+        } else {
+            if (onComplete) onComplete(data);
+        }
+    };
 
     try {
         nmap = spawn('nmap', ['-sn', '-oG', '-', target]);
     } catch (e) {
         console.log('Nmap spawn sync error, falling back to JS scan');
-        fallbackScan(target, onDeviceFound, onComplete);
+        fallbackScan(target, onDeviceFound, finishScan);
         return;
     }
 
     nmap.stdout.on('data', (data) => {
         const output = data.toString();
-
         const lines = output.split('\n');
         lines.forEach(line => {
             if (line.startsWith('Host:')) {
@@ -105,26 +115,26 @@ const scan = (target, onDeviceFound, onComplete, onError) => {
     });
 
     nmap.on('close', (code) => {
-        // console.log(`Nmap scan completed with code ${code}`);
-        if (code !== 0 && nmapResults.length === 0) {
-            // Likely failed to run or found nothing.
-            // If checking 'nmap --version' failed previously, we know it's missing.
-            // But spawn might emit 'error' instead of close with code != 0 if binary missing.
+        if (code !== 0 && nmapResults.length === 0 && !scanFinished) {
+            // If it failed and we haven't found anything, try fallback or error
+            // Check if it's already handled by error event
         } else {
-            if (onComplete) onComplete(nmapResults);
+            finishScan(nmapResults);
         }
     });
 
     nmap.on('error', (err) => {
+        if (scanFinished) return;
         console.error('Failed to start nmap process:', err.code);
         if (err.code === 'ENOENT') {
             console.log('Nmap not found in PATH. Switching to fallback JS scanner...');
-            fallbackScan(target, onDeviceFound, onComplete);
+            fallbackScan(target, onDeviceFound, finishScan);
         } else {
-            if (onError) onError('Failed to execute Nmap.');
+            finishScan('Failed to execute Nmap.', true);
         }
     });
 };
+
 
 const net = require('net');
 

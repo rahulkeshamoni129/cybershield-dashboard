@@ -76,7 +76,7 @@ export const ThreatProvider = ({ children }: { children: ReactNode }) => {
                 mitreTactic: 'Initial Access',
                 mitreId: 'T1078',
                 timestamp: new Date(attack.timestamp),
-                dataSource: attack.dataSource
+                dataSource: attack.dataSource || attack.details?.dataSource || 'Simulation'
             };
 
             // Append new threat to the top, keep max 100

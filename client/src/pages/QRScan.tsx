@@ -207,7 +207,8 @@ const QRScan = () => {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
+
                   className="hidden"
                   onChange={handleFileUpload}
                 />

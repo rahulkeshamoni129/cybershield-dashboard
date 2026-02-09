@@ -20,81 +20,180 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { io } from 'socket.io-client';
-
-// Initial Mock data setup (will be overwritten by live data)
-const initialHourly = Array.from({ length: 24 }, (_, i) => ({
-  hour: `${i}:00`,
-  attacks: Math.floor(Math.random() * 50),
-  blocked: Math.floor(Math.random() * 20),
-}));
-
-const weeklyTrend = [
-  { day: 'Mon', critical: 12, high: 45, medium: 120, low: 230 },
-  { day: 'Tue', critical: 8, high: 52, medium: 98, low: 210 },
-  { day: 'Wed', critical: 15, high: 38, medium: 145, low: 195 },
-  { day: 'Thu', critical: 22, high: 65, medium: 110, low: 280 },
-  { day: 'Fri', critical: 18, high: 48, medium: 130, low: 245 },
-  { day: 'Sat', critical: 5, high: 22, medium: 65, low: 120 },
-  { day: 'Sun', critical: 3, high: 18, medium: 55, low: 95 },
-];
-
-const initialVectors = [
-  { name: 'Threat Pulse', value: 100, color: 'hsl(var(--primary))' },
-];
-
-const topAttackers = [
-  { country: 'RU', attacks: 0, percentage: 0 },
-  { country: 'CN', attacks: 0, percentage: 0 },
-  { country: 'US', attacks: 0, percentage: 0 },
-  { country: 'BR', attacks: 0, percentage: 0 },
-  { country: 'IN', attacks: 0, percentage: 0 },
-];
-
-const monthlyData = Array.from({ length: 30 }, (_, i) => ({
-  day: i + 1,
-  threats: Math.floor(Math.random() * 500) + 100,
-  incidents: Math.floor(Math.random() * 20) + 5,
-}));
+import { useAuth } from '@/context/AuthContext';
 
 const Analytics = () => {
-  const [hourlyData, setHourlyData] = useState<any[]>(initialHourly);
-  const [vectors, setVectors] = useState<any[]>(initialVectors);
-  const [attackers, setAttackers] = useState<any[]>(topAttackers);
+  const { token } = useAuth();
+  const [hourlyData, setHourlyData] = useState<any[]>([]);
+  const [vectors, setVectors] = useState<any[]>([]);
+  const [attackers, setAttackers] = useState<any[]>([]);
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [severityData, setSeverityData] = useState<any>({ Low: 0, Medium: 0, High: 0, Critical: 0 });
 
+  // Fetch initial analytics data
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchAnalytics = async () => {
+      try {
+        const res = await fetch('/api/analytics', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        // Hourly trend
+        if (data.trendData) {
+          const formattedHourly = data.trendData.map((item: any) => ({
+            hour: item.time,
+            attacks: item.threats,
+            blocked: Math.floor(item.threats * 0.7) // Simulate 70% blocked
+          }));
+          setHourlyData(formattedHourly);
+        }
+
+        // Attack vectors
+        if (data.attacksByType) {
+          const TYPE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+          const vectorsArray = Object.entries(data.attacksByType).map(([name, value], i) => ({
+            name,
+            value: Number(value),
+            color: TYPE_COLORS[i % TYPE_COLORS.length]
+          }));
+          setVectors(vectorsArray);
+        }
+
+        // Top attackers
+        if (data.topSources) {
+          const total = Object.values(data.topSources).reduce((a: any, b: any) => a + b, 0) as number;
+          const attackersArray = Object.entries(data.topSources).map(([country, count]) => ({
+            country,
+            attacks: Number(count),
+            percentage: total > 0 ? Math.round((Number(count) / total) * 100) : 0
+          })).sort((a, b) => b.attacks - a.attacks).slice(0, 5);
+          setAttackers(attackersArray);
+        }
+
+        // Severity distribution for weekly view
+        if (data.severityDistribution) {
+          setSeverityData(data.severityDistribution);
+        }
+
+        // Use weekly trend data from API
+        if (data.weeklyTrendData && data.weeklyTrendData.length > 0) {
+          setWeeklyData(data.weeklyTrendData);
+        }
+
+        // Use monthly trend data from API
+        if (data.monthlyTrendData && data.monthlyTrendData.length > 0) {
+          setMonthlyData(data.monthlyTrendData);
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      }
+    };
+
+    fetchAnalytics();
+  }, [token]);
+
+  // Real-time updates via Socket.IO
   useEffect(() => {
     const socket = io('/', {
       path: '/socket.io',
       transports: ['websocket'],
     });
 
-    socket.on('dashboard_stats', (data: any) => {
-      if (data.history) {
-        setHourlyData([...data.history]);
-      }
+    socket.on('connect', () => {
+      console.log('[Analytics] Socket connected:', socket.id);
+    });
 
+    socket.on('dashboard_stats', (data: any) => {
+      console.log('[Analytics] Received dashboard_stats:', data);
+
+      // Update attack vectors
       if (data.typeDistribution) {
-        const distArray = Object.keys(data.typeDistribution).map((key, index) => ({
-          name: key,
-          value: data.typeDistribution[key],
-          color: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'][index % 6]
+        const TYPE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+        const distArray = Object.entries(data.typeDistribution).map(([name, value], index) => ({
+          name,
+          value: Number(value),
+          color: TYPE_COLORS[index % 6]
         }));
         if (distArray.length > 0) setVectors(distArray);
       }
 
+      // Update top attackers
       if (data.topSources) {
+        console.log('[Analytics] Top sources:', data.topSources);
         const total = Object.values(data.topSources).reduce((a: any, b: any) => a + b, 0) as number;
-        const sourcesArray = Object.keys(data.topSources).map(key => ({
-          country: key,
-          attacks: data.topSources[key],
-          percentage: total > 0 ? Math.round((data.topSources[key] / total) * 100) : 0
+        const sourcesArray = Object.entries(data.topSources).map(([country, count]) => ({
+          country,
+          attacks: Number(count),
+          percentage: total > 0 ? Math.round((Number(count) / total) * 100) : 0
         })).sort((a, b) => b.attacks - a.attacks).slice(0, 5);
 
-        if (sourcesArray.length > 0) setAttackers(sourcesArray);
+        if (sourcesArray.length > 0) {
+          console.log('[Analytics] Setting attackers:', sourcesArray);
+          setAttackers(sourcesArray);
+        }
       }
     });
 
     socket.on('attack_event', (attack: any) => {
-      // Handled via dashboard_stats
+      console.log('[Analytics] Received attack_event:', attack.sourceCountry, attack.attackType);
+      // Update hourly data for current hour
+      const currentHour = new Date().getHours();
+      setHourlyData(prev => {
+        const updated = [...prev];
+        const hourEntry = updated.find(h => h.hour === `${currentHour}:00`);
+        if (hourEntry) {
+          hourEntry.attacks += 1;
+          hourEntry.blocked = Math.floor(hourEntry.attacks * 0.7);
+        }
+        return updated;
+      });
+
+      // Update top attackers immediately
+      setAttackers(prev => {
+        const updated = [...prev];
+        const countryIndex = updated.findIndex(a => a.country === attack.sourceCountry);
+
+        if (countryIndex !== -1) {
+          // Country already in top 5, increment
+          updated[countryIndex].attacks += 1;
+        } else {
+          // New country, add it
+          updated.push({ country: attack.sourceCountry, attacks: 1, percentage: 0 });
+        }
+
+        // Recalculate percentages
+        const total = updated.reduce((sum, a) => sum + a.attacks, 0);
+        updated.forEach(a => {
+          a.percentage = total > 0 ? Math.round((a.attacks / total) * 100) : 0;
+        });
+
+        // Sort and keep top 5
+        return updated.sort((a, b) => b.attacks - a.attacks).slice(0, 5);
+      });
+
+      // Update attack vectors immediately
+      setVectors(prev => {
+        const updated = [...prev];
+        const typeIndex = updated.findIndex(v => v.name === attack.attackType);
+
+        if (typeIndex !== -1) {
+          updated[typeIndex].value += 1;
+        } else {
+          const TYPE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+          updated.push({
+            name: attack.attackType,
+            value: 1,
+            color: TYPE_COLORS[updated.length % TYPE_COLORS.length]
+          });
+        }
+
+        return updated;
+      });
     });
 
     return () => {
@@ -254,11 +353,11 @@ const Analytics = () => {
 
           <TabsContent value="week" className="space-y-6">
             <Card className="soc-card">
-              <CardHeader><CardTitle>Weekly Trends (Historical)</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Weekly Trends (Data-Driven)</CardTitle></CardHeader>
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyTrend}>
+                    <BarChart data={weeklyData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                       <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                       <YAxis tick={{ fill: 'hsl(var(--muted-foreground))' }} />

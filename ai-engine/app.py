@@ -1,17 +1,36 @@
 import os
 import json
 import numpy as np
+import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from dotenv import load_dotenv
+
+# Load environment variables from parent directory (server/.env)
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', 'server', '.env')
+load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 CORS(app)
 
 KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), 'data', 'knowledge.json')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
-# Global variables for the model
+# Configure Gemini if key is present
+model = None
+if GEMINI_API_KEY and GEMINI_API_KEY != 'YOUR_GEMINI_API_KEY_HERE':
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        print("Gemini AI Model initialized successfully.")
+    except Exception as e:
+        print(f"Failed to initialize Gemini: {e}")
+else:
+    print("GEMINI_API_KEY not found or invalid. AI will run in fallback (keyword-match) mode.")
+
+# Global variables for the local model (RAG retrieval)
 vectorizer = None
 tfidf_matrix = None
 knowledge_base = []
@@ -19,9 +38,13 @@ knowledge_base = []
 def load_knowledge_base():
     global knowledge_base
     try:
-        with open(KNOWLEDGE_FILE, 'r') as f:
-            knowledge_base = json.load(f)
-        print(f"Loaded {len(knowledge_base)} entries from knowledge base.")
+        if os.path.exists(KNOWLEDGE_FILE):
+            with open(KNOWLEDGE_FILE, 'r') as f:
+                knowledge_base = json.load(f)
+            print(f"Loaded {len(knowledge_base)} entries from knowledge base.")
+        else:
+            print("Knowledge base file not found. Starting empty.")
+            knowledge_base = []
     except Exception as e:
         print(f"Error loading knowledge base: {e}")
         knowledge_base = []
@@ -39,7 +62,7 @@ def train_model():
     
     vectorizer = TfidfVectorizer(stop_words='english')
     tfidf_matrix = vectorizer.fit_transform(corpus)
-    print("AI Model retrained successfully.")
+    print("Local Retrieval Model retrained successfully.")
 
 # Initial load and train
 load_knowledge_base()
@@ -47,46 +70,98 @@ train_model()
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global vectorizer, tfidf_matrix, knowledge_base
+    global vectorizer, tfidf_matrix, knowledge_base, model
     
-    if not vectorizer or not knowledge_base:
-        return jsonify({
-            "reply": "My brain is currently empty. Please train me first!",
-            "severity": "Unknown"
-        })
-
     data = request.json
-    user_message = data.get('message', '').lower()
+    user_message = data.get('message', '')
     
-    # 1. Vectorize the user query
-    query_vec = vectorizer.transform([user_message])
-    
-    # 2. Calculate cosine similarity against all knowledge entries
-    similarities = cosine_similarity(query_vec, tfidf_matrix).flatten()
-    
-    # 3. Find the best match
-    best_match_idx = np.argmax(similarities)
-    best_score = similarities[best_match_idx]
-    
-    # Threshold for "I don't know"
-    # 0.1 is a low bar, but allows for fuzzy matching. 
-    # If the user types "ddos", it hits "ddos" in keywords resulting in high score.
-    if best_score < 0.1: 
+    if not user_message:
+        return jsonify({"reply": "Please say something!", "severity": "Info"})
+
+    # Context Retrieval (RAG)
+    best_match = None
+    best_score = 0
+    context = ""
+
+    if vectorizer and knowledge_base:
+        try:
+            query_vec = vectorizer.transform([user_message.lower()])
+            similarities = cosine_similarity(query_vec, tfidf_matrix).flatten()
+            best_match_idx = np.argmax(similarities)
+            best_score = similarities[best_match_idx]
+            
+            if best_score > 0.1:
+                match = knowledge_base[best_match_idx]
+                best_match = match
+                context = f"Relevant Knowledge Base Entry:\nQuestion: {match['question']}\nAnswer: {match['answer']}\nMITRE ID: {match.get('mitre_id', 'N/A')}"
+        except Exception as e:
+            print(f"Retrieval error: {e}")
+
+    # Decision: Use Gemini or Local Fallback
+    if model:
+        try:
+            # System Prompt with Strict Scoping
+            system_instruction = """You are CyberShield AI, a specialized Tier 3 SOC Analyst for the CyberShield platform.
+Your ONLY purpose is to assist with cybersecurity operations, threat analysis, and platform-related queries.
+
+STRICT SCOPE LIMITATIONS:
+1. You must ONLY answer questions related to:
+   - Cybersecurity threats (Malware, Phishing, DDoS, CVEs, etc.)
+   - Network security, firewalls, and protocols
+   - The CyberShield dashboard capabilities and features
+   - Incident response, mitigation strategies, and security best practices
+   - Analyzing IP addresses, hashes, logs, or code snippets for vulnerabilities.
+
+2. If the user asks about ANY other topic (e.g., cooking, history, general coding not related to security, math, creative writing), you must POLITELY REFUSE.
+   - Standard refusal: "I am designed exclusively for cybersecurity operations. I cannot assist with non-security related queries."
+
+3. Context Usage:
+   - Use the provided 'Context' from the knowledge base if it exists.
+   - If the user asks about "this project" or "the dashboard", strictly use the provided Context to answer.
+
+Tone: Professional, Concise, Technical, and Actionable.
+Format: Markdown."""
+            
+            prompt = f"{system_instruction}\n\nContext:\n{context}\n\nUser Question: {user_message}"
+            
+            response = model.generate_content(prompt)
+            reply_text = response.text
+            
+            # Extract metadata from best match if relevant, even if Gemini generated the text
+            mitre_id = best_match.get('mitre_id') if best_match else None
+            mitre_name = best_match.get('mitre_name') if best_match else None
+            severity = best_match.get('severity', 'Info') if best_match else 'Info'
+
+            return jsonify({
+                "reply": reply_text,
+                "mitre_id": mitre_id,
+                "mitre_name": mitre_name,
+                "severity": severity,
+                "confidence": 1.0, # AI is confident
+                "source": "Gemini AI + Knowledge Base"
+            })
+
+        except Exception as ai_err:
+            print(f"Gemini generation failed: {ai_err}")
+            print(f"Error Type: {type(ai_err)}")
+            # Fall through to local fallback
+
+    # Fallback Mode (Local Only)
+    if best_match and best_score > 0.1:
         return jsonify({
-            "reply": "I'm not sure about that specific topic yet. I specialize in cybersecurity threats like DDoS, Phishing, and Malware. Try asking me about those!",
+            "reply": best_match['answer'],
+            "mitre_id": best_match.get('mitre_id'),
+            "mitre_name": best_match.get('mitre_name'),
+            "severity": best_match.get('severity', 'Info'),
+            "confidence": float(best_score),
+            "source": "Local Knowledge Base"
+        })
+    else:
+        return jsonify({
+            "reply": "I don't have enough information on that topic locally, and my AI brain is currently offline. Please try asking about common threats like DDoS, Phishing, or Malware.",
             "severity": "Unknown",
             "mitre_id": None
         })
-    
-    match = knowledge_base[best_match_idx]
-    
-    return jsonify({
-        "reply": match['answer'],
-        "mitre_id": match.get('mitre_id'),
-        "mitre_name": match.get('mitre_name'),
-        "severity": match.get('severity', 'Info'),
-        "confidence": float(best_score)
-    })
 
 @app.route('/train', methods=['POST'])
 def train_endpoint():
@@ -117,20 +192,22 @@ def train_endpoint():
     except Exception as e:
         return jsonify({"error": f"Failed to save to disk: {e}"}), 500
         
-    # Retrain model
+    # Retrain retrieval model
     train_model()
     
-    return jsonify({"status": "success", "message": "I have learned this new information!"})
+    return jsonify({"status": "success", "message": "I have learned this new information locally!"})
 
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
         "status": "healthy",
         "knowledge_count": len(knowledge_base),
-        "model_loaded": vectorizer is not None
+        "retrieval_model_loaded": vectorizer is not None,
+        "generative_ai_active": model is not None
     })
 
 if __name__ == '__main__':
     # Ensure data directory exists
     os.makedirs(os.path.join(os.path.dirname(__file__), 'data'), exist_ok=True)
     app.run(host='0.0.0.0', port=5001)
+

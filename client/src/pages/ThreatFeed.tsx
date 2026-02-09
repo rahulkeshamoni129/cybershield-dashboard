@@ -183,7 +183,7 @@ const ThreatFeed = () => {
                         <div className="mt-1">
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded border",
-                            threat.dataSource === 'AlienVault'
+                            threat.dataSource.includes('AlienVault')
                               ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
                               : "bg-slate-500/10 text-slate-500 border-slate-500/20"
                           )}>

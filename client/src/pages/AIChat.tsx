@@ -28,7 +28,10 @@ interface Message {
     title: string;
     url?: string;
   }[];
+  source?: string;
+  confidence?: number;
 }
+
 
 const suggestedQuestions = [
   "What is a DDoS attack and how can I mitigate it?",
@@ -224,6 +227,8 @@ How can I assist you today?`,
         content: data.reply || "I'm having trouble connecting to the server.",
         timestamp: new Date(),
         references: references,
+        source: data.source,
+        confidence: data.confidence,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -307,7 +312,20 @@ How can I assist you today?`,
             </div>
           )}
 
-          <p className="text-[10px] mt-2 opacity-50">
+          {/* AI Source Metadata */}
+          {!isUser && message.source && (
+            <div className="mt-2 pt-2 border-t border-border/30 flex items-center justify-between text-[10px] text-muted-foreground/70">
+              <div className="flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                <span>Source: {message.source}</span>
+              </div>
+              {message.confidence && (
+                <span>Conf: {(message.confidence * 100).toFixed(0)}%</span>
+              )}
+            </div>
+          )}
+
+          <p className="text-[10px] mt-1 opacity-50 text-right">
             {message.timestamp.toLocaleTimeString()}
           </p>
         </div>
