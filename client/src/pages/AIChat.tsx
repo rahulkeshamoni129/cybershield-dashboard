@@ -187,7 +187,7 @@ How can I assist you today?`,
 
   const sendMessage = async (text?: string) => {
     const messageText = text || input;
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || isTyping) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -210,10 +210,14 @@ How can I assist you today?`,
         body: JSON.stringify({ message: messageText }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Server returned ${res.status}`);
+      }
+
       const data = await res.json();
 
       const references: Message['references'] = [];
-      if (data.mitre_id) {
+      if (data && data.mitre_id) {
         references.push({
           type: 'mitre',
           title: `${data.mitre_id} - ${data.mitre_name}`,
@@ -224,11 +228,11 @@ How can I assist you today?`,
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.reply || "I'm having trouble connecting to the server.",
+        content: data?.reply || "I'm having trouble formulating a response. Please try again.",
         timestamp: new Date(),
         references: references,
-        source: data.source,
-        confidence: data.confidence,
+        source: data?.source,
+        confidence: data?.confidence,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
@@ -237,7 +241,7 @@ How can I assist you today?`,
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "Sorry, I am unable to connect to the AI engine at the moment.",
+        content: "Sorry, I am unable to connect to the AI engine at the moment. Please verify the AI engine is running on port 5001.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

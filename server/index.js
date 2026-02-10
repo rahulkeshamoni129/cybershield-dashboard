@@ -53,7 +53,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes are protected internally by the route handlers
 app.use('/api/threats', protect, requireRole('user'), threatRoutes);
 app.use('/api/incidents', protect, requireRole('user'), incidentRoutes);
-app.use('/api/ai', protect, requireRole('user'), aiRoutes);
+
+app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', protect, requireRole('user'), analyticsRoutes);
 
 app.use('/api/network', protect, requireRole('user'), networkRoutes);

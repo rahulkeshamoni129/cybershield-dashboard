@@ -1,7 +1,6 @@
 import os
 import json
 import numpy as np
-import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -16,19 +15,15 @@ app = Flask(__name__)
 CORS(app)
 
 KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), 'data', 'knowledge.json')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama3-70b-8192')
 
-# Configure Gemini if key is present
-model = None
-if GEMINI_API_KEY and GEMINI_API_KEY != 'YOUR_GEMINI_API_KEY_HERE':
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        print("Gemini AI Model initialized successfully.")
-    except Exception as e:
-        print(f"Failed to initialize Gemini: {e}")
+# Diagnostic print for startup
+if GROQ_API_KEY and not GROQ_API_KEY.startswith('gsk_YOUR'):
+    print(f"Groq Engine initialized with model: {GROQ_MODEL}")
+    print(f"API Key detected (prefix): {GROQ_API_KEY[:10]}...")
 else:
-    print("GEMINI_API_KEY not found or invalid. AI will run in fallback (keyword-match) mode.")
+    print("GROQ_API_KEY not found or invalid. AI will run in fallback (local-only) mode.")
 
 # Global variables for the local model (RAG retrieval)
 vectorizer = None
@@ -70,7 +65,7 @@ train_model()
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global vectorizer, tfidf_matrix, knowledge_base, model
+    global vectorizer, tfidf_matrix, knowledge_base
     
     data = request.json
     user_message = data.get('message', '')
@@ -97,54 +92,79 @@ def chat():
         except Exception as e:
             print(f"Retrieval error: {e}")
 
-    # Decision: Use Gemini or Local Fallback
-    if model:
+    # Decision: Use Groq or Local Fallback
+    if GROQ_API_KEY and not GROQ_API_KEY.startswith('gsk_YOUR'):
         try:
             # System Prompt with Strict Scoping
-            system_instruction = """You are CyberShield AI, a specialized Tier 3 SOC Analyst for the CyberShield platform.
-Your ONLY purpose is to assist with cybersecurity operations, threat analysis, and platform-related queries.
+            system_instruction = """You are CyberShield AI, a specialized Tier 3 SOC Analyst for the CyberShieldplatform.
+            
+Your ONLY purpose is to assist with cybersecurity operations, threat analysis, and CyberShield platform-related queries.
 
 STRICT SCOPE LIMITATIONS:
 1. You must ONLY answer questions related to:
    - Cybersecurity threats (Malware, Phishing, DDoS, CVEs, etc.)
-   - Network security, firewalls, and protocols
-   - The CyberShield dashboard capabilities and features
-   - Incident response, mitigation strategies, and security best practices
-   - Analyzing IP addresses, hashes, logs, or code snippets for vulnerabilities.
+   - Network security, firewalls, protocols, and digital forensics.
+   - The CyberShield dashboard features, alerts, and analytics tools.
+   - Incident response, mitigation strategies, and security best practices.
+   - Analyzing security logs, IP addresses, or code for vulnerabilities.
 
-2. If the user asks about ANY other topic (e.g., cooking, history, general coding not related to security, math, creative writing), you must POLITELY REFUSE.
-   - Standard refusal: "I am designed exclusively for cybersecurity operations. I cannot assist with non-security related queries."
+2. FORBIDDEN TOPICS:
+   - General conversation, history, politics, or entertainment.
+   - Cooking, recipes, or life advice.
+   - General programming not related to security (e.g., "how to build a website").
+   - Math, physics, or general science.
 
-3. Context Usage:
-   - Use the provided 'Context' from the knowledge base if it exists.
-   - If the user asks about "this project" or "the dashboard", strictly use the provided Context to answer.
+3. REFUSAL POLICY:
+   - If a question is outside these topics, you MUST say: "I am specialized exclusively in cybersecurity and the CyberShield platform. I cannot assist with non-security related queries."
+   - Do not attempt to be helpful on other topics.
 
-Tone: Professional, Concise, Technical, and Actionable.
-Format: Markdown."""
+4. Context Usage:
+   - Use the provided 'Context' from the knowledge base to answer specifically about this project.
+"""
             
-            prompt = f"{system_instruction}\n\nContext:\n{context}\n\nUser Question: {user_message}"
+            import requests # Local import to ensure it's available
             
-            response = model.generate_content(prompt)
-            reply_text = response.text
+            response = requests.post(
+                url="https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": f"Context: {context}\n\nUser Question: {user_message}"}
+                    ],
+                    "temperature": 0.5
+                },
+                timeout=20
+            )
             
-            # Extract metadata from best match if relevant, even if Gemini generated the text
-            mitre_id = best_match.get('mitre_id') if best_match else None
-            mitre_name = best_match.get('mitre_name') if best_match else None
-            severity = best_match.get('severity', 'Info') if best_match else 'Info'
+            if response.status_code == 200:
+                result = response.json()
+                reply_text = result['choices'][0]['message']['content']
+                
+                # Extract metadata from best match if relevant
+                mitre_id = best_match.get('mitre_id') if best_match else None
+                mitre_name = best_match.get('mitre_name') if best_match else None
+                severity = best_match.get('severity', 'Info') if best_match else 'Info'
 
-            return jsonify({
-                "reply": reply_text,
-                "mitre_id": mitre_id,
-                "mitre_name": mitre_name,
-                "severity": severity,
-                "confidence": 1.0, # AI is confident
-                "source": "Gemini AI + Knowledge Base"
-            })
+                return jsonify({
+                    "reply": reply_text,
+                    "mitre_id": mitre_id,
+                    "mitre_name": mitre_name,
+                    "severity": severity,
+                    "confidence": 1.0,
+                    "source": f"Groq AI ({GROQ_MODEL}) + RAG"
+                })
+            else:
+                print(f"Groq Error: {response.text}")
+                # Fall through to local fallback
 
         except Exception as ai_err:
-            print(f"Gemini generation failed: {ai_err}")
-            print(f"Error Type: {type(ai_err)}")
-            # Fall through to local fallback
+            print(f"OpenRouter request failed: {ai_err}")
+            # Fall through to local fallback below
 
     # Fallback Mode (Local Only)
     if best_match and best_score > 0.1:
@@ -197,13 +217,68 @@ def train_endpoint():
     
     return jsonify({"status": "success", "message": "I have learned this new information locally!"})
 
+@app.route('/test-ai', methods=['GET'])
+def test_ai():
+    """
+    Minimal test endpoint to confirm Groq connectivity.
+    """
+    if not GROQ_API_KEY or GROQ_API_KEY.startswith('gsk_YOUR'):
+        return jsonify({
+            "status": "Error",
+            "message": "GROQ_API_KEY is missing or contains placeholder value."
+        }), 400
+
+    try:
+        import requests
+        print("DIAGNOSTIC: Sending test prompt to Groq...")
+        
+        response = requests.post(
+            url="https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": GROQ_MODEL,
+                "messages": [
+                    {"role": "user", "content": "Say OK if you are working"}
+                ],
+                "max_tokens": 10
+            },
+            timeout=15
+        )
+
+        if response.status_code == 200:
+            result = response.json()
+            reply = result['choices'][0]['message']['content']
+            print(f"DIAGNOSTIC SUCCESS: Groq responded: {reply}")
+            return jsonify({
+                "status": "AI working",
+                "model": GROQ_MODEL,
+                "api_response": reply
+            })
+        else:
+            print(f"DIAGNOSTIC FAILURE: {response.text}")
+            return jsonify({
+                "status": "Error",
+                "code": response.status_code,
+                "message": response.text
+            }), response.status_code
+
+    except Exception as e:
+        print(f"DIAGNOSTIC EXCEPTION: {str(e)}")
+        return jsonify({
+            "status": "Error",
+            "message": str(e)
+        }), 500
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({
         "status": "healthy",
         "knowledge_count": len(knowledge_base),
         "retrieval_model_loaded": vectorizer is not None,
-        "generative_ai_active": model is not None
+        "generative_ai_active": GROQ_API_KEY is not None and not GROQ_API_KEY.startswith('gsk_YOUR')
     })
 
 if __name__ == '__main__':
