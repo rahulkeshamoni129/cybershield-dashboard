@@ -7,6 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Card,
   CardContent,
@@ -54,8 +61,13 @@ const Incidents = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newIncidentData, setNewIncidentData] = useState({ title: '', description: '', severity: 'Medium' });
+  const [noteText, setNoteText] = useState('');
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
 
   // Fetch Incidents from Backend
   useEffect(() => {
@@ -85,6 +97,129 @@ const Incidents = () => {
 
     fetchIncidents();
   }, [token, isAuthenticated]);
+
+  const handleCreateIncident = async () => {
+    if (!newIncidentData.title) {
+      toast({ title: 'Error', description: 'Please provide a title', variant: 'destructive' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newIncidentData),
+      });
+
+      if (response.ok) {
+        const createdIncident = await response.json();
+        const processed = {
+          ...createdIncident,
+          created: new Date(createdIncident.created),
+          timeline: createdIncident.timeline.map((t: any) => ({
+            ...t,
+            timestamp: new Date(t.timestamp)
+          }))
+        };
+        setIncidents([processed, ...incidents]);
+        setIsCreateDialogOpen(false);
+        setNewIncidentData({ title: '', description: '', severity: 'Medium' });
+        toast({ title: 'Success', description: 'Incident created successfully' });
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown server error' }));
+        toast({
+          title: 'Error',
+          description: `Failed: ${errorData.message || response.statusText}`,
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error creating incident:', error);
+      toast({
+        title: 'Network Error',
+        description: error.message || 'Could not connect to server',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateStatus = async (status: string) => {
+    if (!selectedIncident) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/incidents/${selectedIncident.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status,
+          title: selectedIncident.title,
+          description: selectedIncident.description,
+          severity: selectedIncident.severity,
+          affectedAssets: selectedIncident.affectedAssets
+        }),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setIncidents(incidents.map((i) => (i.id === updated.id ? { ...updated, created: new Date(updated.created), timeline: updated.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) } : i)));
+        setSelectedIncident({ ...updated, created: new Date(updated.created), timeline: updated.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) });
+        toast({ title: 'Success', description: `Status updated to ${status}` });
+      } else {
+        toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!selectedIncident || !noteText) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/incidents/${selectedIncident.id}/notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          note: noteText,
+          title: selectedIncident.title,
+          description: selectedIncident.description,
+          severity: selectedIncident.severity,
+          affectedAssets: selectedIncident.affectedAssets
+        }),
+      });
+
+      if (response.ok) {
+        const updated = await response.json();
+        setIncidents(incidents.map((i) => (i.id === updated.id ? { ...updated, created: new Date(updated.created), timeline: updated.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) } : i)));
+        setSelectedIncident({ ...updated, created: new Date(updated.created), timeline: updated.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) });
+        setNoteText('');
+        setIsNoteDialogOpen(false);
+        toast({ title: 'Success', description: 'Note added' });
+      } else {
+        toast({ title: 'Error', description: 'Failed to add note', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Error adding note:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Listen for Real-time WebSocket Updates
   useEffect(() => {
@@ -159,7 +294,7 @@ const Incidents = () => {
               Track and manage security incidents
             </p>
           </div>
-          <Dialog>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -176,13 +311,45 @@ const Incidents = () => {
               <div className="space-y-4 pt-4">
                 <div>
                   <label className="text-sm font-medium">Title</label>
-                  <Input placeholder="Incident title..." className="mt-1" />
+                  <Input
+                    placeholder="Incident title..."
+                    className="mt-1"
+                    value={newIncidentData.title}
+                    onChange={(e) => setNewIncidentData({ ...newIncidentData, title: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium">Description</label>
-                  <Textarea placeholder="Describe the incident..." className="mt-1" rows={4} />
+                  <Textarea
+                    placeholder="Describe the incident..."
+                    className="mt-1"
+                    rows={4}
+                    value={newIncidentData.description}
+                    onChange={(e) => setNewIncidentData({ ...newIncidentData, description: e.target.value })}
+                  />
                 </div>
-                <Button className="w-full">Create Incident</Button>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">Severity</label>
+                    <select
+                      className="w-full mt-1 bg-background border border-input rounded-md px-3 py-2 text-sm"
+                      value={newIncidentData.severity}
+                      onChange={(e) => setNewIncidentData({ ...newIncidentData, severity: e.target.value })}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleCreateIncident}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Incident'}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -398,6 +565,11 @@ const Incidents = () => {
                             <p className="text-xs text-muted-foreground">
                               {event.user} • {event.timestamp.toLocaleString()}
                             </p>
+                            {event.note && (
+                              <div className="mt-2 p-2 rounded bg-muted/50 text-xs border border-border/50">
+                                {event.note}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -406,8 +578,58 @@ const Incidents = () => {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-4 border-t border-border">
-                    <Button className="flex-1">Update Status</Button>
-                    <Button variant="outline" className="flex-1">Add Note</Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button className="flex-1" disabled={isSubmitting}>
+                          Update Status
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="soc-card min-w-[160px]">
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('Open')}>
+                          Open
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('Investigating')}>
+                          Investigating
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('Resolved')}>
+                          Resolved
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleUpdateStatus('Closed')}>
+                          Closed
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1" disabled={isSubmitting}>
+                          Add Note
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="soc-card">
+                        <DialogHeader>
+                          <DialogTitle>Add Note</DialogTitle>
+                          <DialogDescription>
+                            Add a comment or update to the incident timeline
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 pt-4">
+                          <Textarea
+                            placeholder="Type your note here..."
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            rows={4}
+                          />
+                          <Button
+                            className="w-full"
+                            onClick={handleAddNote}
+                            disabled={isSubmitting || !noteText}
+                          >
+                            {isSubmitting ? 'Saving...' : 'Save Note'}
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </CardContent>
               </Card>

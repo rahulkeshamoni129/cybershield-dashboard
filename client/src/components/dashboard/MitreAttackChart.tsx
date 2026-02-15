@@ -24,7 +24,7 @@ const MitreAttackChart = ({ data }: MitreChartProps) => {
     return (
         <div className="soc-card h-full min-h-[250px] flex flex-col">
             <div className="mb-4">
-                <h3 className="text-lg font-semibold">Unknown Tactics</h3>
+                <h3 className="text-lg font-semibold">Threat Lifecycle Analysis</h3>
                 <p className="text-sm text-muted-foreground">MITRE ATT&CK Framework Mapping</p>
             </div>
 

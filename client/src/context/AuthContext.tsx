@@ -6,6 +6,7 @@ export interface User {
     username: string;
     email: string;
     role: 'user' | 'admin';
+    department?: string;
     token: string;
 }
 
@@ -13,6 +14,7 @@ interface AuthContextType {
     user: User | null;
     login: (userData: User) => void;
     logout: () => void;
+    updateUser: (updates: Partial<User>) => void;
     isAuthenticated: boolean;
     isAdmin: boolean;
     token: string | null;
@@ -46,6 +48,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('token', userData.token);
     };
 
+    const updateUser = (updates: Partial<User>) => {
+        if (!user) return;
+        const updatedUser = { ...user, ...updates };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem('user');
@@ -56,7 +65,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const isAdmin = user?.role === 'admin';
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isAdmin, token: user?.token || null }}>
+        <AuthContext.Provider value={{
+            user,
+            login,
+            logout,
+            updateUser, // Added updateUser to the context value
+            isAuthenticated,
+            isAdmin,
+            token: user?.token || null
+        }}>
             {children}
         </AuthContext.Provider>
     );

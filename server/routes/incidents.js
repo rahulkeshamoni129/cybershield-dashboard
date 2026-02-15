@@ -1,59 +1,61 @@
 const express = require('express');
 const router = express.Router();
-
-// Mock Incidents Data (Fallback) and Real Data Merger
+const Incident = require('../models/Incident');
 const socketManager = require('../services/socketManager');
 
-router.get('/', (req, res) => {
+// Helper to generate a unique Incident ID
+const generateIncidentId = () => {
+    return 'INC-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+};
+
+const Threat = require('../models/Threat');
+
+// @route   GET /api/incidents
+// @desc    Get all incidents (Limit 50, backfilled with threats)
+router.get('/', async (req, res) => {
     try {
-        const realThreats = socketManager.getThreats ? socketManager.getThreats() : [];
+        // 1. Get official managed incidents from DB (Limit 50)
+        const dbIncidents = await Incident.find().sort({ created: -1 }).limit(50);
 
-        let incidentsList = [];
+        let incidentsList = [...dbIncidents];
 
-        if (realThreats && realThreats.length > 0) {
-            incidentsList = realThreats.map((threat, index) => {
-                // Determine status based on confidence score (simulation)
-                const score = threat.abuseConfidenceScore || 50;
-                let status = 'Open';
-                if (score < 60) status = 'Resolved';
-                else if (score < 80) status = 'Investigating';
+        // 2. If we have fewer than 50 managed incidents, fill with real-time threats from history
+        if (incidentsList.length < 50) {
+            const fillCount = 50 - incidentsList.length;
+            const recentThreats = await Threat.find()
+                .sort({ timestamp: -1 })
+                .limit(fillCount);
 
-                let severity = 'Low';
-                if (score > 90) severity = 'Critical';
-                else if (score > 75) severity = 'High';
-                else if (score > 50) severity = 'Medium';
+            if (recentThreats && recentThreats.length > 0) {
+                const threatIncidents = recentThreats.map((threat) => {
+                    const sevScore = threat.severity || 5;
+                    let severity = 'Medium';
+                    if (sevScore >= 9) severity = 'Critical';
+                    else if (sevScore >= 7) severity = 'High';
+                    else if (sevScore <= 3) severity = 'Low';
 
-                return {
-                    id: `SOC-${1000 + index}`,
-                    title: threat.desc || `Suspicious Activity from ${threat.ipAddress}`,
-                    status: status,
-                    severity: severity,
-                    assignee: 'AI System',
-                    created: new Date().toISOString(), // Use ISO for smoother frontend parsing
-                    description: `Detected threat from ${threat.ipAddress} (${threat.countryCode}). Confidence: ${score}%`,
-                    affectedAssets: [`Server-Gateway-${index % 5}`],
-                    timeline: [
-                        { action: 'Threat Detected', user: 'System', timestamp: new Date() }
-                    ]
-                };
-            });
-        }
+                    return {
+                        id: `LIVE-${threat._id.toString().slice(-6).toUpperCase()}`,
+                        title: `${threat.attackType} from ${threat.ipFrom}`,
+                        status: 'Open',
+                        severity: severity,
+                        assignee: 'AI System',
+                        created: threat.timestamp,
+                        description: `Real-time threat detected. Source: ${threat.sourceCountry}, Target: ${threat.destinationCountry} (${threat.ipTo}).`,
+                        affectedAssets: ['Edge-Firewall'],
+                        timeline: [{
+                            action: 'Detected by IDS',
+                            user: 'System',
+                            timestamp: threat.timestamp
+                        }]
+                    };
+                });
+                incidentsList = [...incidentsList, ...threatIncidents];
 
-        // Appending legacy/mock items if list is empty to avoid blank screen
-        if (incidentsList.length === 0) {
-            incidentsList = [
-                {
-                    id: 'MOCK-1',
-                    title: 'Unauthorized Access Attempt (Simulation)',
-                    status: 'Open',
-                    severity: 'High',
-                    assignee: 'Admin',
-                    created: new Date().toISOString(),
-                    description: 'Simulated incident pending real threat data.',
-                    affectedAssets: ['Gateway'],
-                    timeline: []
-                }
-            ];
+                // Final sort to make sure managed incidents and threats are interleaved correctly by time
+                incidentsList.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+                incidentsList = incidentsList.slice(0, 50);
+            }
         }
 
         res.json(incidentsList);
@@ -63,9 +65,118 @@ router.get('/', (req, res) => {
     }
 });
 
-router.post('/', (req, res) => {
-    // Just a mock response for now, as we don't have a Persistent Incident Model yet
-    res.status(201).json({ message: 'Incident reported' });
+// @route   POST /api/incidents
+// @desc    Create a new incident
+router.post('/', async (req, res) => {
+    try {
+        console.log('Incident POST request received:', req.body);
+        const { title, description, severity, affectedAssets } = req.body;
+
+        const username = req.user ? (req.user.username || 'Admin') : 'Admin';
+
+        const newIncident = new Incident({
+            id: generateIncidentId(),
+            title,
+            description,
+            severity: severity || 'Medium',
+            affectedAssets: affectedAssets || ['General Asset'],
+            assignee: username,
+            timeline: [{
+                action: 'Incident Created',
+                user: username,
+                timestamp: new Date()
+            }]
+        });
+
+        const savedIncident = await newIncident.save();
+        console.log('Incident saved successfully:', savedIncident.id);
+        res.status(201).json(savedIncident);
+    } catch (error) {
+        console.error('Error creating incident:', error);
+        res.status(500).json({
+            message: 'Error creating incident',
+            error: error.message
+        });
+    }
+});
+
+// @route   PATCH /api/incidents/:id/status
+// @desc    Update incident status
+router.patch('/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        let incident = await Incident.findOne({ id: req.params.id });
+
+        if (!incident) {
+            // If it's a LIVE incident, we promote it to a DB incident on first action
+            if (req.params.id.startsWith('LIVE-') || req.params.id.startsWith('SOC-')) {
+                // We'd ideally need more data from frontend here if it's not in DB, 
+                // but for now we'll create a skeletal one or use defaults.
+                incident = new Incident({
+                    id: req.params.id,
+                    title: req.body.title || 'Uncategorized Threat',
+                    description: req.body.description || 'Promoted from live threat feed.',
+                    severity: req.body.severity || 'Medium',
+                    affectedAssets: req.body.affectedAssets || ['Gateway'],
+                    assignee: req.user.username || 'Admin'
+                });
+            } else {
+                return res.status(404).json({ message: 'Incident not found' });
+            }
+        }
+
+        incident.status = status;
+        incident.timeline.push({
+            action: `Status updated to ${status}`,
+            user: req.user.username || 'Admin',
+            timestamp: new Date()
+        });
+
+        await incident.save();
+        res.json(incident);
+    } catch (error) {
+        console.error('Error updating status:', error);
+        res.status(500).json({ message: 'Error updating incident status' });
+    }
+});
+
+// @route   POST /api/incidents/:id/notes
+// @desc    Add a note/comment to the timeline
+router.post('/:id/notes', async (req, res) => {
+    try {
+        const { note } = req.body;
+        let incident = await Incident.findOne({ id: req.params.id });
+
+        if (!incident) {
+            // Promote live/mock incident to DB
+            if (req.params.id.startsWith('LIVE-') || req.params.id.startsWith('SOC-')) {
+                incident = new Incident({
+                    id: req.params.id,
+                    title: req.body.title || 'Uncategorized Threat',
+                    description: req.body.description || 'Promoted from live threat feed.',
+                    severity: req.body.severity || 'Medium',
+                    affectedAssets: req.body.affectedAssets || ['Gateway'],
+                    assignee: req.user.username || 'Admin'
+                });
+            } else {
+                return res.status(404).json({ message: 'Incident not found' });
+            }
+        }
+
+        incident.timeline.push({
+            action: 'Note Added',
+            user: req.user.username || 'Admin',
+            timestamp: new Date(),
+            note: note
+        });
+
+        await incident.save();
+        res.json(incident);
+    } catch (error) {
+        console.error('Error adding note:', error);
+        res.status(500).json({ message: 'Error adding note' });
+    }
 });
 
 module.exports = router;
+

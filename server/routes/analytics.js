@@ -263,16 +263,40 @@ router.get('/', async (req, res) => {
 
             severityDistribution, // { Low: 10, ... }
 
-            // Map Threat severity to confidence score ranges for histogram
-            // Severity 1-10 → Confidence buckets for visualization
-            confidenceHistogram: threatSeverity.map(b => {
-                const label = sevLabelMap[b._id] || 'Critical';
-                let range = 90; // default
-                if (label === 'Low') range = 10;
-                else if (label === 'Medium') range = 40;
-                else if (label === 'High') range = 60;
-                else if (label === 'Critical') range = 90;
-                return { range, count: b.count };
+            // 7. Consolidate Confidence Histogram (Real-time + Ground Truth)
+            confidenceHistogram: [0, 20, 40, 60, 80].map(r => {
+                let count = 0;
+                // Add from threats
+                threatSeverity.forEach(b => {
+                    const label = sevLabelMap[b._id] || 'Critical';
+                    let targetRange;
+                    if (label === 'Low') targetRange = 0;
+                    else if (label === 'Medium') targetRange = 20;
+                    else if (label === 'High') targetRange = 40;
+                    else if (label === 'Critical') targetRange = 60;
+
+                    // Distribute Critical even further if it's high
+                    if (label === 'Critical' && b._id > 8) targetRange = 80;
+
+                    if (targetRange === r) count += b.count;
+                });
+
+                // Add from daily blacklist
+                dailySeverity.forEach(b => {
+                    const dailyLabel = dailySevLabelMap[b._id] || 'Critical';
+                    let targetRange;
+                    if (dailyLabel === 'Low') targetRange = 0;
+                    else if (dailyLabel === 'Medium') targetRange = 20;
+                    else if (dailyLabel === 'High') targetRange = 40;
+                    else if (dailyLabel === 'Critical') targetRange = 60;
+
+                    // Distribute daily scores too
+                    if (b._id >= 91) targetRange = 80;
+
+                    if (targetRange === r) count += b.count;
+                });
+
+                return { range: r, count };
             }),
 
             mitreData

@@ -6,7 +6,8 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    Cell
+    Cell,
+    LabelList
 } from 'recharts';
 
 interface ConfScoreChartProps {
@@ -78,6 +79,7 @@ const ConfidenceScoreChart = ({ scores, distribution }: ConfScoreChartProps) => 
                             {buckets.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[index]} />
                             ))}
+                            <LabelList dataKey="count" position="top" style={{ fill: 'hsl(var(--foreground))', fontSize: 10, fontWeight: 'bold' }} />
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>

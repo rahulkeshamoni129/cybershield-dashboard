@@ -6,7 +6,8 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    Cell
+    Cell,
+    LabelList
 } from 'recharts';
 
 interface SeverityChartProps {
@@ -63,6 +64,7 @@ const SeverityChart = ({ distribution }: SeverityChartProps) => {
                             {sortedData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={getColor(entry.name)} />
                             ))}
+                            <LabelList dataKey="value" position="top" style={{ fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 'bold' }} />
                         </Bar>
                     </BarChart>
                 </ResponsiveContainer>

@@ -150,12 +150,11 @@
   }
 
   .soc-card:hover {
-    @apply transform -translate-y-[2px] shadow-md;
+    @apply border-primary/20 shadow-md;
   }
 
   .dark .soc-card:hover {
-    @apply border-white/10 bg-card/70;
-    box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.5);
+    @apply border-white/20 bg-card/70 shadow-2xl;
   }
 
   .soc-card-glow {

@@ -12,23 +12,57 @@ import { Bell, Shield, User, Lock, Moon, Sun, Smartphone, Mail, Globe } from 'lu
 import { useTheme } from '@/components/theme-provider';
 
 const Settings = () => {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const { toast } = useToast();
     const { theme, setTheme } = useTheme();
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [pushNotifications, setPushNotifications] = useState(false);
     const [securityAlerts, setSecurityAlerts] = useState(true);
     const [twoFactor, setTwoFactor] = useState(false);
+    const [department, setDepartment] = useState(user?.department || 'Security Operations');
+    const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
-    const handleSave = () => {
-        toast({
-            title: "Settings Updated",
-            description: "Your preferences have been saved successfully.",
-        });
+    const handleSaveProfile = async () => {
+        setIsUpdatingProfile(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/auth/profile', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ department })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                updateUser({ department: data.department });
+                toast({
+                    title: "Profile Updated",
+                    description: "Your information has been saved successfully.",
+                });
+            } else {
+                const data = await response.json();
+                toast({
+                    title: "Error",
+                    description: data.message || "Failed to update profile",
+                    variant: "destructive"
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "An error occurred while saving profile.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsUpdatingProfile(false);
+        }
     };
 
     const handlePasswordChange = async () => {
@@ -127,7 +161,8 @@ const Settings = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="email">Email</Label>
-                                        <Input id="email" defaultValue={user?.email} />
+                                        <Input id="email" defaultValue={user?.email} disabled />
+                                        <p className="text-[10px] text-muted-foreground">Registered email is permanent.</p>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="role">Role</Label>
@@ -135,12 +170,18 @@ const Settings = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="department">Department</Label>
-                                        <Input id="department" defaultValue="Security Operations" />
+                                        <Input
+                                            id="department"
+                                            value={department}
+                                            onChange={(e) => setDepartment(e.target.value)}
+                                        />
                                     </div>
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button onClick={handleSave}>Save Changes</Button>
+                                <Button onClick={handleSaveProfile} disabled={isUpdatingProfile}>
+                                    {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
+                                </Button>
                             </CardFooter>
                         </Card>
                     </TabsContent>
@@ -159,36 +200,18 @@ const Settings = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5">
                                         <div className="flex items-center gap-2">
-                                            <Mail className="h-4 w-4 text-muted-foreground" />
-                                            <Label className="text-base">Email Notifications</Label>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">Receive daily summaries and reports via email</p>
-                                    </div>
-                                    <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <div className="flex items-center gap-2">
-                                            <Smartphone className="h-4 w-4 text-muted-foreground" />
-                                            <Label className="text-base">Push Notifications</Label>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">Receive real-time alerts on your mobile device</p>
-                                    </div>
-                                    <Switch checked={pushNotifications} onCheckedChange={setPushNotifications} />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <div className="flex items-center gap-2">
                                             <Shield className="h-4 w-4 text-muted-foreground" />
-                                            <Label className="text-base">Critical Security Alerts</Label>
+                                            <Label className="text-base">System Audit Logging</Label>
                                         </div>
-                                        <p className="text-sm text-muted-foreground">Always notify for high-severity incidents</p>
+                                        <p className="text-sm text-muted-foreground">Log all administrative actions for compliance</p>
                                     </div>
-                                    <Switch checked={securityAlerts} onCheckedChange={setSecurityAlerts} disabled />
+                                    <Switch checked={true} disabled />
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button onClick={handleSave}>Save Preferences</Button>
+                                <p className="text-xs text-muted-foreground italic">
+                                    Integration for external Email/Push services is pending configuration.
+                                </p>
                             </CardFooter>
                         </Card>
                     </TabsContent>
@@ -267,13 +290,6 @@ const Settings = () => {
                                             />
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center justify-between pt-4 border-t border-border">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base">Two-Factor Authentication</Label>
-                                        <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-                                    </div>
-                                    <Switch checked={twoFactor} onCheckedChange={setTwoFactor} />
                                 </div>
                             </CardContent>
                             <CardFooter>

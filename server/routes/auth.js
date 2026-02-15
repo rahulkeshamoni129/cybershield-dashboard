@@ -62,6 +62,32 @@ router.post('/changepassword', protect, async (req, res) => {
     }
 });
 
+router.patch('/profile', protect, async (req, res) => {
+    try {
+        if (req.user._id && typeof req.user._id === 'string' && req.user._id.startsWith('mock-')) {
+            return res.status(400).json({ message: 'Profile updates are not allowed for demo accounts.' });
+        }
+
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (req.body.department) {
+            user.department = req.body.department;
+        }
+
+        const updatedUser = await user.save();
+        res.json({
+            _id: updatedUser._id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            role: updatedUser.role,
+            department: updatedUser.department
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 

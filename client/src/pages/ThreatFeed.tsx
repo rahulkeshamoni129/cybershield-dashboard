@@ -23,6 +23,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 import {
   Search,
   Filter,
@@ -31,7 +33,17 @@ import {
   Shield,
   Clock,
   MapPin,
+  AlertTriangle,
+  FileText,
+  Activity,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const severityStyles = {
   critical: 'threat-critical',
@@ -61,6 +73,11 @@ const ThreatFeed = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedThreat, setSelectedThreat] = useState<Threat | null>(null);
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  const navigate = useNavigate();
+  const { token } = useAuth();
 
   useEffect(() => {
     let filtered = threats;
@@ -88,6 +105,50 @@ const ThreatFeed = () => {
 
   const formatTime = (date: Date) => {
     return date.toLocaleString();
+  };
+
+  const handlePromoteToIncident = async (threat: Threat) => {
+    setIsPromoting(true);
+    try {
+      const response = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: `${threat.type} from ${threat.source.ip}`,
+          description: `Automatic promotion of threat detected at ${threat.timestamp.toLocaleString()}. \nSource: ${threat.source.ip} (${threat.source.country})\nTarget: ${threat.target.ip} (${threat.target.country})`,
+          severity: getSeverityLabel(threat.severity).charAt(0).toUpperCase() + getSeverityLabel(threat.severity).slice(1),
+          affectedAssets: ['Gateway', 'Threat Intelligence Node'],
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Success',
+          description: 'Threat promoted to incident successfully.',
+        });
+        setSelectedThreat(null);
+        // Optional: Navigate to incidents page
+        // navigate('/incidents');
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to promote threat to incident.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error promoting threat:', error);
+      toast({
+        title: 'Network Error',
+        description: 'Could not connect to the management server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPromoting(false);
+    }
   };
 
   return (
@@ -241,7 +302,12 @@ const ThreatFeed = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setSelectedThreat(threat)}
+                      >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -252,6 +318,114 @@ const ThreatFeed = () => {
           </ScrollArea>
         </div>
       </div>
+
+      {/* Threat Detail Modal */}
+      <Dialog open={!!selectedThreat} onOpenChange={(open) => !open && setSelectedThreat(null)}>
+        <DialogContent className="soc-card max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Shield className="h-6 w-6 text-primary" />
+              Threat Analysis: {selectedThreat?.id}
+            </DialogTitle>
+            <DialogDescription>
+              Detailed technical analysis of the detected threat event
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedThreat && (
+            <div className="space-y-6 pt-4">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Source Information</p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-sm">{selectedThreat.source.ip}</span>
+                      <Badge variant="outline" className="text-[10px]">{selectedThreat.source.country}</Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Target Information</p>
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-sm">{selectedThreat.target.ip}</span>
+                      <Badge variant="outline" className="text-[10px]">{selectedThreat.target.country}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Severity & Status</p>
+                    <div className="flex items-center gap-2">
+                      <Badge className={severityStyles[getSeverityLabel(selectedThreat.severity)]}>
+                        {getSeverityLabel(selectedThreat.severity).toUpperCase()}
+                      </Badge>
+                      <Badge variant="secondary" className="capitalize">{selectedThreat.status}</Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-muted/30">
+                    <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Incident Time</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      {selectedThreat.timestamp.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border border-border bg-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    Security Intelligence
+                  </h4>
+                  {selectedThreat.dataSource && (
+                    <Badge variant="outline" className="text-[10px] opacity-70">Provider: {selectedThreat.dataSource}</Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Attack Type</p>
+                    <p className="font-medium text-primary">{selectedThreat.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">MITRE ATT&CK</p>
+                    <p className="font-medium">{selectedThreat.mitreTactic} ({selectedThreat.mitreId})</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Analyst Note</p>
+                    <p className="mt-1">
+                      High-confidence detection from {selectedThreat.dataSource || 'local probe'}.
+                      The pattern suggests {selectedThreat.type.toLowerCase()} targeting internal infrastructure assets.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1"
+                  onClick={() => handlePromoteToIncident(selectedThreat)}
+                  disabled={isPromoting}
+                >
+                  <Activity className="mr-2 h-4 w-4" />
+                  {isPromoting ? 'Promoting...' : 'Promote to Incident'}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => navigate('/chat')}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Analyze with AI
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

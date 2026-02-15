@@ -162,13 +162,13 @@ export const geoAttackData = Object.keys(COUNTRIES).slice(0, 5).map(code => ({
 export interface Incident {
     id: string;
     title: string;
-    status: 'Open' | 'Investigating' | 'Resolved';
+    status: 'Open' | 'Investigating' | 'Resolved' | 'Closed';
     severity: 'Low' | 'Medium' | 'High' | 'Critical';
     assignee: string;
     created: Date;
     description: string;
     affectedAssets: string[];
-    timeline: { action: string; user: string; timestamp: Date }[];
+    timeline: { action: string; user: string; timestamp: Date; note?: string }[];
 }
 
 export const generateIncidents = (count: number): Incident[] => {
