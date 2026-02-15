@@ -41,6 +41,17 @@ router.get('/', async (req, res) => {
             { $limit: 7 }
         ]);
 
+        // NEW: Hourly trend from DailyBlacklist (distributed)
+        const dailyBlacklistHourlyPromise = DailyBlacklist.aggregate([
+            { $match: { createdAt: { $gte: yesterday } } },
+            {
+                $group: {
+                    _id: { $hour: "$createdAt" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
         // Weekly trend with severity breakdown (last 7 days from DailyBlacklist)
         // Note: Using abuseConfidenceScore to categorize severity for historical records
         const weeklyTrendPromise = DailyBlacklist.aggregate([
@@ -105,24 +116,27 @@ router.get('/', async (req, res) => {
         ]);
 
         // Execute remaining aggregations
-        const [trendHour, trendDay, weeklyTrend, monthlyTrend, typesData] = await Promise.all([
+        const [trendHour, trendDay, weeklyTrend, monthlyTrend, typesData, dailyBlacklistHourly] = await Promise.all([
             trendPromise,
             dailyTrendPromise,
             weeklyTrendPromise,
             monthlyTrendPromise,
-            typePromise
+            typePromise,
+            dailyBlacklistHourlyPromise
         ]);
 
 
         // --- Post-Processing & Formatting ---
 
-        // 1. Trend Formatting
+        // 1. Trend Formatting (Combine Real-time Threats + Distributed Daily Blacklist)
         const trendFormatted = Array.from({ length: 24 }, (_, i) => {
             const hour = i;
-            const found = trendHour.find(t => t._id === hour);
+            const threatFound = trendHour.find(t => t._id === hour);
+            const blacklistFound = dailyBlacklistHourly.find(b => b._id === hour);
+
             return {
                 time: `${hour}:00`,
-                threats: found ? found.count : 0
+                threats: (threatFound ? threatFound.count : 0) + (blacklistFound ? blacklistFound.count : 0)
             };
         });
 

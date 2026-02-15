@@ -16,7 +16,7 @@ const DailyBlacklistSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now,
-        index: { expires: 86400 } // Delete after 24 hours
+        index: { expires: 2592000 } // Keep for 30 days to support monthly trends
     }
 });
 

@@ -109,35 +109,41 @@ const runDailyAbuseIPDBJob = async () => {
         const data = response.data.data; // Array of IPs
         if (!data || data.length === 0) return;
 
-        console.log(`AbuseIPDB: Received ${data.length} records. Cleaning old data and saving to DB...`);
+        console.log(`AbuseIPDB: Received ${data.length} records. Distributing timestamps and saving...`);
 
-        // Clear yesterday's data to match user requirement: "delete the data after the next day"
-        // This ensures Only today's ground truth exists in the DailyBlacklist collection.
-        await DailyBlacklist.deleteMany({ fetchDate: { $ne: today } });
+        const bulkOps = data.map(item => {
+            // Randomly spread the 1000 records across the last 24 hours
+            // This prevents the "spike" at fetch time in the charts
+            const randomHour = Math.floor(Math.random() * 24);
+            const randomMin = Math.floor(Math.random() * 60);
+            const timestamp = new Date();
+            timestamp.setHours(timestamp.getHours() - randomHour);
+            timestamp.setMinutes(timestamp.getMinutes() - randomMin);
 
-        const bulkOps = data.map(item => ({
-
-            updateOne: {
-                filter: { ipAddress: item.ipAddress, fetchDate: today },
-                update: {
-                    $set: {
-                        ipAddress: item.ipAddress,
-                        countryCode: item.countryCode,
-                        abuseConfidenceScore: item.abuseConfidenceScore,
-                        fetchDate: today,
-                        fullData: item
-                    }
-                },
-                upsert: true
-            }
-        }));
+            return {
+                updateOne: {
+                    filter: { ipAddress: item.ipAddress, fetchDate: today },
+                    update: {
+                        $set: {
+                            ipAddress: item.ipAddress,
+                            countryCode: item.countryCode,
+                            abuseConfidenceScore: item.abuseConfidenceScore,
+                            fetchDate: today,
+                            fullData: item,
+                            createdAt: timestamp
+                        }
+                    },
+                    upsert: true
+                }
+            };
+        });
 
         await DailyBlacklist.bulkWrite(bulkOps);
 
-        // MongoDB Free Tier Protection: Ensure we don't exceed 1000 ground truth records
+        // Cap at 30,000 ground truth records (approx 30 days of 1000 records)
         const count = await DailyBlacklist.countDocuments();
-        if (count > 1000) {
-            const oldest = await DailyBlacklist.find().sort({ _id: 1 }).limit(count - 1000);
+        if (count > 30000) {
+            const oldest = await DailyBlacklist.find().sort({ createdAt: 1 }).limit(count - 30000);
             await DailyBlacklist.deleteMany({ _id: { $in: oldest.map(d => d._id) } });
         }
 
