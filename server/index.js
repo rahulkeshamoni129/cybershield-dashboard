@@ -60,6 +60,15 @@ app.use('/api/analytics', protect, requireRole('user'), analyticsRoutes);
 app.use('/api/network', protect, requireRole('user'), networkRoutes);
 app.use('/api/qr', protect, requireRole('user'), require('./routes/qr'));
 
+app.get('/api/health', (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+        status: dbStatus === 'connected' ? 'ok' : 'error',
+        database: dbStatus,
+        timestamp: new Date()
+    });
+});
+
 app.get('/', (req, res) => {
     res.send('CyberShield SOC API is running...');
 });

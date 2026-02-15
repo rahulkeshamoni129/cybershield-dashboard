@@ -1,4 +1,4 @@
-import { Bell, Search, User, Shield, Activity, Wifi, WifiOff, XCircle } from 'lucide-react';
+import { Bell, Search, User, Shield, Activity, Database, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useThreatContext } from '@/context/ThreatContext';
 import { useState, useEffect } from 'react';
@@ -39,16 +39,19 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+    const checkDBStatus = async () => {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        setIsOnline(data.database === 'connected');
+      } catch (err) {
+        setIsOnline(false);
+      }
     };
+
+    checkDBStatus();
+    const interval = setInterval(checkDBStatus, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const getSeverityColor = (sev: number) => {
@@ -74,18 +77,8 @@ const Header = () => {
   return (
     <header className="fixed top-0 right-0 left-64 z-30 h-16 bg-card/80 backdrop-blur-md border-b border-border transition-all duration-300">
       <div className="flex items-center justify-between h-full px-6">
-        {/* Search */}
-        <div className="flex items-center gap-4 flex-1 max-w-xl">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search threats, IPs, incidents..."
-              className="pl-10 bg-muted/50 border-border focus:border-primary"
-            />
-          </div>
-        </div>
-
         {/* Status indicators */}
+        <div className="flex-1" />
         <div className="flex items-center gap-4">
 
           {/* System Status */}
@@ -93,13 +86,13 @@ const Header = () => {
             <div className="flex items-center gap-1.5">
               {isOnline ? (
                 <>
-                  <Wifi className="h-4 w-4 text-accent" />
-                  <span className="text-accent font-medium">Online</span>
+                  <Database className="h-4 w-4 text-accent" />
+                  <span className="text-accent font-medium">DB Online</span>
                 </>
               ) : (
                 <>
-                  <WifiOff className="h-4 w-4 text-destructive" />
-                  <span className="text-destructive font-medium">Offline</span>
+                  <Database className="h-4 w-4 text-destructive" />
+                  <span className="text-destructive font-medium">DB Offline</span>
                 </>
               )}
             </div>
