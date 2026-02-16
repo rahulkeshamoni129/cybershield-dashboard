@@ -66,6 +66,7 @@ const Incidents = () => {
   const [noteText, setNoteText] = useState('');
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalThreats, setTotalThreats] = useState(0);
 
   const { token, isAuthenticated, user } = useAuth();
 
@@ -97,6 +98,21 @@ const Incidents = () => {
     };
 
     fetchIncidents();
+
+    // Fetch Total Threats count for the "Open" display
+    const fetchTotalStats = async () => {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${apiUrl}/api/analytics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        setTotalThreats(data.totalAttacks || 50);
+      } catch (err) {
+        console.error("Failed to fetch total stats:", err);
+      }
+    };
+    fetchTotalStats();
   }, [token, isAuthenticated]);
 
   const handleCreateIncident = async () => {
@@ -128,6 +144,7 @@ const Incidents = () => {
           }))
         };
         setIncidents([processed, ...incidents]);
+        setTotalThreats(prev => prev + 1);
         setIsCreateDialogOpen(false);
         setNewIncidentData({ title: '', description: '', severity: 'Medium' });
         toast({ title: 'Success', description: 'Incident created successfully' });
@@ -263,8 +280,11 @@ const Incidents = () => {
 
         setIncidents(prev => {
           const updated = [newIncident, ...prev];
-          return updated.slice(0, 50); // Keep incidents list from growing indefinitely
+          return updated.slice(0, 50);
         });
+
+        // Keep total count increasing live
+        setTotalThreats(prev => prev + 1);
       });
 
       return () => {
@@ -365,7 +385,7 @@ const Incidents = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-destructive">{stats.open}</p>
+                  <p className="text-2xl font-bold text-destructive">{totalThreats}</p>
                   <p className="text-sm text-muted-foreground">Open</p>
                 </div>
                 <XCircle className="h-8 w-8 text-destructive/50" />
