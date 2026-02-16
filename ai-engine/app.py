@@ -16,7 +16,7 @@ CORS(app)
 
 KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), 'data', 'knowledge.json')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama3-70b-8192')
+GROQ_MODEL = os.getenv('GROQ_MODEL', 'llama-3.3-70b-versatile')
 
 # Diagnostic print for startup
 if GROQ_API_KEY and not GROQ_API_KEY.startswith('gsk_YOUR'):

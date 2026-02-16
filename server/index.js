@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth');
 const incidentRoutes = require('./routes/incidents');
 const aiRoutes = require('./routes/ai');
 const analyticsRoutes = require('./routes/analytics');
+const { startKeepAlive } = require('./services/keepAliveService');
 
 
 const networkRoutes = require('./routes/network');
@@ -93,6 +94,8 @@ const startServer = async () => {
 
         server.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
+            // Start Keep-Alive to wake up AI Engine
+            startKeepAlive();
         });
     } catch (err) {
         console.error('Failed to start server:', err);
