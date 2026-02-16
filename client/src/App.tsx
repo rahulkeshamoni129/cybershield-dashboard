@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
 import Dashboard from "./pages/Dashboard";
 import ThreatFeed from "./pages/ThreatFeed";
 import NetworkScan from "./pages/NetworkScan";
@@ -25,44 +26,51 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ThreatProvider>
-        <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+const App = () => {
+  // Wake up backend on load
+  useEffect(() => {
+    fetch('/api/health').catch(() => { });
+  }, []);
 
-                {/* Protected User Routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/threats" element={<ThreatFeed />} />
-                  <Route path="/network" element={<NetworkScan />} />
-                  <Route path="/ip-check" element={<IPCheck />} />
-                  <Route path="/qr-scan" element={<QRScan />} />
-                  <Route path="/analytics" element={<Analytics />} />
-                  <Route path="/incidents" element={<Incidents />} />
-                  <Route path="/chat" element={<AIChat />} />
-                  <Route path="/settings" element={<Settings />} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ThreatProvider>
+          <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
 
-                  {/* Admin Routes */}
-                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  <Route path="/admin/users" element={<UserManagement />} />
-                </Route>
+                  {/* Protected User Routes */}
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/threats" element={<ThreatFeed />} />
+                    <Route path="/network" element={<NetworkScan />} />
+                    <Route path="/ip-check" element={<IPCheck />} />
+                    <Route path="/qr-scan" element={<QRScan />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/incidents" element={<Incidents />} />
+                    <Route path="/chat" element={<AIChat />} />
+                    <Route path="/settings" element={<Settings />} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ThemeProvider>
-      </ThreatProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+                    {/* Admin Routes */}
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/users" element={<UserManagement />} />
+                  </Route>
+
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </ThemeProvider>
+        </ThreatProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

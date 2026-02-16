@@ -1,0 +1,42 @@
+services:
+  # 1. Frontend (Static Site - React/Vite)
+  - type: web
+    name: cybershield-frontend
+    runtime: static
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: cybershield-api
+          property: url
+
+  # 2. Backend API (Node.js Express)
+  - type: web
+    name: cybershield-api
+    runtime: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false  # You will paste this in Dashboard
+      - key: JWT_SECRET
+        sync: false  # You will paste this in Dashboard
+      - key: AI_ENGINE_URL
+        fromService:
+          type: web
+          name: cybershield-ai-engine
+          property: url
+
+  # 3. AI Engine (Python Flask)
+  - type: web
+    name: cybershield-ai-engine
+    runtime: python
+    buildCommand: cd ai-engine && pip install -r requirements.txt
+    startCommand: cd ai-engine && gunicorn app:app
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false  # You will paste this in Dashboard
