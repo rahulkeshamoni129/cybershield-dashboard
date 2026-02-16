@@ -65,34 +65,42 @@ const BackendStatus: React.FC = () => {
     }, [retryCount, status]);
 
     return (
-        <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all duration-500",
-            status === 'connecting' && "bg-amber-500/10 border-amber-500/30 text-amber-500",
-            status === 'connected' && "bg-emerald-500/10 border-emerald-500/30 text-emerald-500",
-            status === 'error' && "bg-rose-500/10 border-rose-500/30 text-rose-500"
-        )}>
+        <div
+            className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all duration-500 cursor-help",
+                status === 'connecting' && "bg-amber-500/10 border-amber-500/30 text-amber-500",
+                status === 'connected' && "bg-emerald-500/10 border-emerald-500/30 text-emerald-500",
+                status === 'error' && "bg-rose-500/10 border-rose-500/30 text-rose-500"
+            )}
+            title={
+                status === 'connecting'
+                    ? "The secure server is waking up to establish a live connection. This usually takes 30-60 seconds on the first load."
+                    : status === 'connected'
+                        ? "The link to the CyberShield SOC is active and receiving real-time threat intelligence."
+                        : "We couldn't reach the security core. Please check your internet or refresh the page."
+            }
+        >
             {status === 'connecting' && (
                 <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span className="text-xs font-medium animate-pulse">Connecting to server...</span>
+                    <span className="text-xs font-medium animate-pulse">Initializing System...</span>
                 </>
             )}
 
             {status === 'connected' && (
                 <>
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">Backend connected</span>
+                    <span className="text-xs font-medium">System Online</span>
                 </>
             )}
 
             {status === 'error' && (
                 <>
                     <XCircle className="h-3.5 w-3.5" />
-                    <span className="text-xs font-medium">Backend not connected</span>
+                    <span className="text-xs font-medium">Connection Error</span>
                 </>
             )}
 
-            {/* Minimalist icon only for mobile if needed, or just keep the text */}
             <div className="ml-1 opacity-50">
                 {status === 'connected' ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
             </div>
