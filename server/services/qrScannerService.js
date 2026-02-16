@@ -118,6 +118,23 @@ const scanURL = async (url) => {
             // Not a valid URL structure, check if it's just a domain
         }
 
+        // --- ROBUSTNESS FIX: Check for API Key ---
+        if (!ALIENVAULT_OTX_KEY) {
+            console.warn('[WARN] ALIENVAULT_OTX_KEY is missing. Skipping external reputation check.');
+            return {
+                url: url,
+                status: 'Unknown',
+                risk: 'Low',
+                score: 0,
+                confidence: 0,
+                threatType: 'Configuration Warning',
+                source: 'Local Check Only',
+                pulses: 0,
+                safeToOpen: true,
+                recommendation: 'Scanner backend is not configured with Threat Intel keys. Proceed with caution.'
+            };
+        }
+
         let endpoint = `https://otx.alienvault.com/api/v1/indicators/domain/${target}/general`;
 
         const response = await axios.get(endpoint, {
@@ -205,8 +222,21 @@ const scanURL = async (url) => {
         }
 
         console.error('OTX Scan Error Details:', error.response ? error.response.data : error.message);
-        console.error('OTX Scan Error:', error.message);
-        throw new Error('Threat Intelligence Gateway Failed');
+        // console.error('OTX Scan Error:', error.message); // This line is redundant with the above
+
+        // Return a safe "Error" object instead of throwing
+        return {
+            url: url,
+            status: 'Error',
+            risk: 'Unknown',
+            score: 0,
+            confidence: 0,
+            threatType: 'Scan Failed',
+            source: 'AlienVault OTX',
+            error: error.message,
+            safeToOpen: false,
+            recommendation: 'Scan failed due to an error. Treat as unsafe.'
+        };
     }
 };
 
