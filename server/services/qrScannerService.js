@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { Jimp } = require('jimp');
+const Jimp = require('jimp'); // Changed from destructuring to default import
 const jsQR = require('jsqr');
 const { PNG } = require('pngjs');
 const jpeg = require('jpeg-js');
@@ -13,122 +13,81 @@ const ALIENVAULT_OTX_KEY = process.env.ALIENVAULT_OTX_KEY;
  */
 const decodeQR = async (base64Image) => {
     try {
-        //Robust Base64 cleaning: Safe split to handle any data:image/ type
+        // Robust Base64 cleaning
         const rawBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
         const buffer = Buffer.from(rawBase64, 'base64');
 
-        console.log(`[DEBUG] Buffer size: ${buffer.length}`);
+        console.log(`[DEBUG] Image Buffer Size: ${buffer.length} bytes`);
 
-        if (!Jimp) console.error('[DEBUG] Jimp is UNDEFINED');
+        // Helper: Attempt to scan a buffer
+        const scanBuffer = (data, width, height) => {
+            const clamped = new Uint8ClampedArray(data);
+            return jsQR(clamped, width, height);
+        };
 
-        let image = null;
-        let width, height, data;
+        // Helper: Convert Jimp image to proper format for jsQR
+        const scanJimpImage = (image) => {
+            return scanBuffer(image.bitmap.data, image.bitmap.width, image.bitmap.height);
+        };
 
+        // 1. Try Primary Method: Jimp (Handles PNG/JPG/BMP/etc + Preprocessing)
         try {
-            image = await Jimp.read(buffer);
-            console.log('[DEBUG] Jimp read successful');
+            const image = await Jimp.read(buffer);
 
+            // Optimization: Resize massive images to prevent blocking
             if (image.bitmap.width > 1200) {
-                const scaleFactor = 1200 / image.bitmap.width;
-                const newHeight = Math.round(image.bitmap.height * scaleFactor);
-                console.log(`[DEBUG] Resizing large image from ${image.bitmap.width}x${image.bitmap.height} to 1200x${newHeight}`);
-                image.resize(1200, newHeight);
+                const scale = 1200 / image.bitmap.width;
+                image.resize(1200, Math.round(image.bitmap.height * scale));
             }
 
-            width = image.bitmap.width;
-            height = image.bitmap.height;
-            data = image.bitmap.data;
-        } catch (jimpErr) {
-            console.warn('[DEBUG] Jimp init failed, trying fallbacks:', jimpErr.message);
-            try {
-                // Fallback 1: PNGJS
-                const pngData = await new Promise((resolve, reject) => {
-                    new PNG().parse(buffer, (err, res) => {
-                        if (err) reject(err);
-                        else resolve(res);
-                    });
-                });
-                width = pngData.width;
-                height = pngData.height;
-                data = pngData.data;
-                console.log('[DEBUG] PNGJS parse successful');
-            } catch (pngErr) {
-                // Fallback 2: JPEG-JS
-                try {
-                    const jpegData = jpeg.decode(buffer, { useTArray: true });
-                    width = jpegData.width;
-                    height = jpegData.height;
-                    data = jpegData.data; // This is a Uint8Array
-                    console.log('[DEBUG] JPEG-JS decode successful');
-                } catch (jpegErr) {
-                    throw new Error(`All decoders failed. Jimp: ${jimpErr.message}`);
-                }
+            // Attempt 1: Raw scan
+            let code = scanJimpImage(image);
+            if (code) return code.data;
+
+            // Attempt 2: Normalization & Contrast
+            // Commonly fixes slightly washed out or dark QR codes
+            image.normalize().contrast(0.6);
+            code = scanJimpImage(image);
+            if (code) return code.data;
+
+            // Attempt 3: Greyscale + Heavy Contrast (Binarization-like)
+            image.greyscale().contrast(0.9);
+            code = scanJimpImage(image);
+            if (code) return code.data;
+
+            // Attempt 4: Invert (Some QR codes are white on black)
+            image.invert();
+            code = scanJimpImage(image);
+            if (code) return code.data;
+
+        } catch (jimpError) {
+            console.warn(`[WARN] Jimp failed to process image: ${jimpError.message}. Trying fallbacks...`);
+        }
+
+        // 2. Fallback Method: Specific Libraries (PNGJS / JPEG-JS)
+        // Useful if Jimp fails on specific compression types or headers
+        try {
+            // Check for PNG signature
+            if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+                const pngData = PNG.sync.read(buffer);
+                const code = scanBuffer(pngData.data, pngData.width, pngData.height);
+                if (code) return code.data;
             }
-        }
-
-        // Ensure data is Uint8ClampedArray for jsQR
-        const clampedData = new Uint8ClampedArray(data);
-        const code = jsQR(clampedData, width, height);
-
-        if (code) {
-            console.log('QR Code Decoded (Attempt 1 - Raw):', code.data);
-            return code.data;
-        }
-
-        console.log('QR Decode Attempt 1 failed. Starting Retries...');
-
-        // Retry Strategy using Jimp for manipulation
-        if (image) {
-            try {
-                // Attempt 2: Normalization (Stretch contrast to full range)
-                const img2 = image.clone();
-                img2.normalize();
-                const data2 = new Uint8ClampedArray(img2.bitmap.data);
-                const code2 = jsQR(data2, img2.bitmap.width, img2.bitmap.height);
-                if (code2) {
-                    console.log('QR Code Decoded (Attempt 2 - Normalized):', code2.data);
-                    return code2.data;
-                }
-
-                // Attempt 3: High Contrast + Greyscale
-                const img3 = image.clone();
-                img3.greyscale().contrast(0.7);
-                const data3 = new Uint8ClampedArray(img3.bitmap.data);
-                const code3 = jsQR(data3, img3.bitmap.width, img3.bitmap.height);
-                if (code3) {
-                    console.log('QR Code Decoded (Attempt 3 - High Contrast):', code3.data);
-                    return code3.data;
-                }
-
-                // Attempt 4: Invert
-                const img4 = image.clone();
-                img4.invert();
-                const data4 = new Uint8ClampedArray(img4.bitmap.data);
-                const code4 = jsQR(data4, img4.bitmap.width, img4.bitmap.height);
-                if (code4) {
-                    console.log('QR Code Decoded (Attempt 4 - Inverted):', code4.data);
-                    return code4.data;
-                }
-
-                // Attempt 5: Posterize (Reduce colors significantly)
-                const img5 = image.clone();
-                img5.posterize(2);
-                const data5 = new Uint8ClampedArray(img5.bitmap.data);
-                const code5 = jsQR(data5, img5.bitmap.width, img5.bitmap.height);
-                if (code5) {
-                    console.log('QR Code Decoded (Attempt 5 - Posterized):', code5.data);
-                    return code5.data;
-                }
-            } catch (retryErr) {
-                console.warn('Retry mechanism failed:', retryErr.message);
+            // Check for JPEG signature (FF D8)
+            else if (buffer[0] === 0xFF && buffer[1] === 0xD8) {
+                const jpegData = jpeg.decode(buffer, { useTArray: true }); // Returns { width, height, data }
+                const code = scanBuffer(jpegData.data, jpegData.width, jpegData.height);
+                if (code) return code.data;
             }
+        } catch (fallbackError) {
+            console.error(`[ERROR] Fallback decoders also failed: ${fallbackError.message}`);
         }
 
-        throw new Error('QR Code pattern not found in image after multiple attempts.');
+        throw new Error('QR Code could not be detected. Please ensure the image is clear and well-lit.');
 
     } catch (error) {
-        console.error('QR Decode Error:', error.message);
-        throw new Error('Failed to decode QR image: ' + error.message);
+        console.error('QR Decode Workflow Error:', error.message);
+        throw new Error(error.message);
     }
 };
 
