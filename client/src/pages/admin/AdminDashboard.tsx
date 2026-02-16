@@ -23,7 +23,8 @@ const AdminDashboard = () => {
         // Fetch System Stats if API available
         const fetchStats = async () => {
             try {
-                const res = await fetch('/api/admin/system-health', {
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                const res = await fetch(`${apiUrl}/api/admin/system-health`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.ok) {
