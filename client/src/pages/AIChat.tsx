@@ -201,7 +201,8 @@ How can I assist you today?`,
     setIsTyping(true);
 
     try {
-      const res = await fetch('/api/ai/chat', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/ai/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

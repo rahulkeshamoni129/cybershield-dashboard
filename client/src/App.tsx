@@ -29,7 +29,8 @@ const queryClient = new QueryClient();
 const App = () => {
   // Wake up backend on load
   useEffect(() => {
-    fetch('/api/health').catch(() => { });
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    fetch(`${apiUrl}/api/health`).catch(() => { });
   }, []);
 
   return (

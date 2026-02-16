@@ -73,7 +73,8 @@ const QRScan = () => {
     setIsScanning(true);
 
     try {
-      const res = await fetch('/api/qr/scan', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/qr/scan`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +124,8 @@ const QRScan = () => {
 
         try {
           // Call Real Backend API
-          const res = await fetch('/api/qr/scan', {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const res = await fetch(`${apiUrl}/api/qr/scan`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
