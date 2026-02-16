@@ -14,13 +14,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import BackendStatus from './BackendStatus';
 
 
 const Header = () => {
   const { user, logout } = useAuth();
   const { threats } = useThreatContext();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isOnline, setIsOnline] = useState(true);
   const [lastReadTime, setLastReadTime] = useState(new Date());
 
   // Filter for NEW notifications (High/Critical severity only) that arrived after last read
@@ -36,23 +36,6 @@ const Header = () => {
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const checkDBStatus = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/health`);
-        const data = await res.json();
-        setIsOnline(data.database === 'connected');
-      } catch (err) {
-        setIsOnline(false);
-      }
-    };
-
-    checkDBStatus();
-    const interval = setInterval(checkDBStatus, 10000); // Check every 10 seconds
-    return () => clearInterval(interval);
   }, []);
 
   const getSeverityColor = (sev: number) => {
@@ -82,25 +65,12 @@ const Header = () => {
         <div className="flex-1" />
         <div className="flex items-center gap-4">
 
-          {/* System Status */}
-          <div className="flex items-center gap-2 text-sm hidden md:flex">
-            <div className="flex items-center gap-1.5">
-              {isOnline ? (
-                <>
-                  <Database className="h-4 w-4 text-accent" />
-                  <span className="text-accent font-medium">DB Online</span>
-                </>
-              ) : (
-                <>
-                  <Database className="h-4 w-4 text-destructive" />
-                  <span className="text-destructive font-medium">DB Offline</span>
-                </>
-              )}
-            </div>
-            <span className="text-border">|</span>
-            <div className="flex items-center gap-1.5">
+          {/* System Status Container */}
+          <div className="flex items-center gap-3 hidden md:flex">
+            <BackendStatus />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-primary/10 border-primary/30 text-primary">
               <Activity className="h-4 w-4 text-primary animate-pulse" />
-              <span className="text-muted-foreground">Live</span>
+              <span className="text-xs font-medium">Live Stream</span>
             </div>
           </div>
 
