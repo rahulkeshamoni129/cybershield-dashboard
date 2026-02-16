@@ -424,8 +424,8 @@ const Incidents = () => {
           <div className="lg:col-span-1">
             <Card className="soc-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Incidents</CardTitle>
-                <CardDescription>{filteredIncidents.length} total incidents</CardDescription>
+                <CardTitle className="text-lg">Recent Incidents</CardTitle>
+                <CardDescription>Showing recent {filteredIncidents.length} incidents</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[500px]">
