@@ -4,7 +4,7 @@ const jsQR = require('jsqr');
 const { PNG } = require('pngjs');
 const jpeg = require('jpeg-js');
 
-const ALIENVAULT_OTX_KEY = process.env.ALIENVAULT_OTX_KEY;
+const ALIENVAULT_OTX_KEY = process.env.ALIENVAULT_OTX_KEY ? process.env.ALIENVAULT_OTX_KEY.trim() : null;
 
 /**
  * Decode QR Code from Base64 Image String

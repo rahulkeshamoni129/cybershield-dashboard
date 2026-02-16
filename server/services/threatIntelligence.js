@@ -170,7 +170,7 @@ const runOTXSeedJob = async () => {
     // Only run if we don't have seeds or if we want to refresh?
     // Let's run on startup to ensure fresh seeds.
     try {
-        const apiKey = process.env.ALIENVAULT_OTX_KEY;
+        const apiKey = process.env.ALIENVAULT_OTX_KEY ? process.env.ALIENVAULT_OTX_KEY.trim() : null;
         if (!apiKey) {
             console.log('OTX: No API Key. Skipping seed fetch.');
             return;
