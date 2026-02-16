@@ -31,7 +31,8 @@ const UserManagement = () => {
         if (!token) return;
         setIsLoading(true);
         try {
-            const res = await fetch('/api/admin/users', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${apiUrl}/api/admin/users`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (res.ok) {
@@ -58,7 +59,8 @@ const UserManagement = () => {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this user?')) return;
         try {
-            const res = await fetch(`/api/admin/users/${id}`, {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${apiUrl}/api/admin/users/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -76,7 +78,8 @@ const UserManagement = () => {
     const toggleRole = async (user: UserData) => {
         const newRole = user.role === 'admin' ? 'user' : 'admin';
         try {
-            const res = await fetch(`/api/admin/users/${user._id}/role`, {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${apiUrl}/api/admin/users/${user._id}/role`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
