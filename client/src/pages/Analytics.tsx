@@ -37,7 +37,8 @@ const Analytics = () => {
 
     const fetchAnalytics = async () => {
       try {
-        const res = await fetch('/api/analytics', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const res = await fetch(`${apiUrl}/api/analytics`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -99,7 +100,8 @@ const Analytics = () => {
 
   // Real-time updates via Socket.IO
   useEffect(() => {
-    const socket = io('/', {
+    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const socket = io(socketUrl, {
       path: '/socket.io',
       transports: ['websocket'],
     });

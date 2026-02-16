@@ -74,7 +74,8 @@ const Incidents = () => {
     const fetchIncidents = async () => {
       if (!isAuthenticated || !token) return;
       try {
-        const response = await fetch('/api/incidents', {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/incidents`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
@@ -106,7 +107,8 @@ const Incidents = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/incidents', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/incidents`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +156,8 @@ const Incidents = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/incidents/${selectedIncident.id}/status`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/incidents/${selectedIncident.id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -189,7 +192,8 @@ const Incidents = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/incidents/${selectedIncident.id}/notes`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/incidents/${selectedIncident.id}/notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -223,7 +227,7 @@ const Incidents = () => {
 
   // Listen for Real-time WebSocket Updates
   useEffect(() => {
-    const socketUrl = import.meta.env.PROD ? '/' : 'http://localhost:5000';
+    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     // Dynamically import socket.io-client to avoid build issues if types are missing at top level
     import('socket.io-client').then(({ io }) => {

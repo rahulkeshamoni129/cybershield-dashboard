@@ -30,7 +30,8 @@ const Settings = () => {
         setIsUpdatingProfile(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/api/auth/profile', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/auth/profile`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -87,7 +88,8 @@ const Settings = () => {
         setIsUpdatingPassword(true);
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('/api/auth/changepassword', {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/auth/changepassword`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

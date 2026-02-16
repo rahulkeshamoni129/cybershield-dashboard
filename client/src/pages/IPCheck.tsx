@@ -76,7 +76,8 @@ const IPCheck = () => {
     setResult(null);
 
     try {
-      const response = await fetch(`/api/threats/ip/${ipInput.trim()}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/threats/ip/${ipInput.trim()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const json = await response.json();
