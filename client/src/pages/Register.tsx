@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Shield, Activity, Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import BackendStatus from '@/components/layout/BackendStatus';
 
 const Register = () => {
     const [username, setUsername] = useState('');
@@ -81,6 +82,11 @@ const Register = () => {
                     </div>
                     <h1 className="text-3xl font-bold gradient-text">CyberShield SOC</h1>
                     <p className="text-muted-foreground mt-2">Security Operations Center</p>
+                </div>
+
+                {/* Global Connection Health Check */}
+                <div className="flex justify-center mb-6">
+                    <BackendStatus />
                 </div>
 
                 {/* Register Form */}
