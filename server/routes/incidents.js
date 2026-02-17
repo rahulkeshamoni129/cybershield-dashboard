@@ -9,6 +9,7 @@ const generateIncidentId = () => {
 };
 
 const Threat = require('../models/Threat');
+const DailyBlacklist = require('../models/DailyBlacklist');
 
 // @route   GET /api/incidents
 // @desc    Get all incidents (Limit 50, backfilled with threats)
@@ -189,10 +190,8 @@ router.get('/stats', async (req, res) => {
             Incident.countDocuments({ severity: 'Critical' })
         ]);
 
-        // We also want to know how many "LIVE" threats are being treated as incidents
-        const analyticsRes = await fetch(`${req.protocol}://${req.get('host')}/api/analytics`);
-        const analyticsData = await analyticsRes.json();
-        const totalThreats = analyticsData.totalAttacks || 0;
+        // Correctly calculate total threats from both collections
+        const totalThreats = (await Threat.countDocuments({})) + (await DailyBlacklist.countDocuments({}));
 
         res.json({
             open: counts[0],

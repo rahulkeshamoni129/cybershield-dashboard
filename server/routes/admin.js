@@ -93,7 +93,7 @@ router.get('/system-health', protect, requireRole('admin'), async (req, res) => 
     try {
         const os = require('os');
         const userCount = await User.countDocuments({});
-        const incidentCount = await Incident.countDocuments({ status: { $ne: 'Resolved' } });
+        const incidentCount = await Incident.countDocuments({ status: { $in: ['Open', 'Investigating', 'investigating'] } });
 
         // Calculate Real Memory Usage
         const totalMem = os.totalmem();

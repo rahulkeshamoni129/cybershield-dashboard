@@ -260,7 +260,7 @@ router.get('/', async (req, res) => {
 
         res.json({
             // Core Metrics
-            totalAttacks: totalRiskCount, // totalRiskCount already includes both simulated threats and daily blacklist records from buckets
+            totalAttacks: (await Threat.countDocuments({})) + (await DailyBlacklist.countDocuments({})),
 
             globalRiskScore,
 
