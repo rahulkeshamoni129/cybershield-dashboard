@@ -92,6 +92,7 @@ router.get('/', async (req, res) => {
                 { $limit: 15 }
             ]),
             DailyBlacklist.aggregate([
+                { $match: { createdAt: { $gte: yesterday } } },
                 { $group: { _id: "$countryCode", count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 15 }

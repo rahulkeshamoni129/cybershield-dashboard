@@ -10,9 +10,10 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const [stats, setStats] = useState({
         users: 0,
-        incidents: 0,
+        activeConnections: 0,
         cpuLoad: '0%',
-        memory: '0%'
+        memory: '0%',
+        uptime: '0s'
     });
 
     useEffect(() => {
@@ -29,11 +30,19 @@ const AdminDashboard = () => {
                 });
                 if (res.ok) {
                     const data = await res.json();
+                    const formatUptime = (seconds: number) => {
+                        const h = Math.floor(seconds / 3600);
+                        const m = Math.floor((seconds % 3600) / 60);
+                        const s = seconds % 60;
+                        return `${h}h ${m}m ${s}s`;
+                    };
+
                     setStats({
                         users: data.userCount || 0,
-                        incidents: data.incidentCount || 0,
+                        activeConnections: data.activeConnections || 0,
                         cpuLoad: data.cpuLoad && data.cpuLoad[0] ? `${(data.cpuLoad[0] * 100).toFixed(1)}%` : '0%',
-                        memory: data.memoryUsage ? `${((data.memoryUsage.heapUsed / data.memoryUsage.heapTotal) * 100).toFixed(1)}%` : 'N/A'
+                        memory: data.memoryUsage ? `${((data.memoryUsage.heapUsed / data.memoryUsage.heapTotal) * 100).toFixed(1)}%` : 'N/A',
+                        uptime: formatUptime(data.uptime || 0)
                     });
                 }
             } catch (error) {
@@ -66,10 +75,10 @@ const AdminDashboard = () => {
                         variant="primary"
                     />
                     <StatCard
-                        title="Active Incidents"
-                        value={stats.incidents}
-                        icon={AlertTriangle}
-                        variant="destructive"
+                        title="Active Connections"
+                        value={stats.activeConnections}
+                        icon={Activity}
+                        variant="accent"
                     />
                     <StatCard
                         title="CPU Load"
@@ -106,6 +115,10 @@ const AdminDashboard = () => {
                             <div className="flex justify-between items-center p-3 rounded-lg bg-muted/30">
                                 <span className="text-muted-foreground">Memory Usage</span>
                                 <span className="font-mono text-warning">{stats.memory}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 rounded-lg bg-muted/30">
+                                <span className="text-muted-foreground">Server Uptime</span>
+                                <span className="font-mono text-info">{stats.uptime}</span>
                             </div>
                         </div>
                     </div>

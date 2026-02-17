@@ -37,6 +37,8 @@ const io = new Server(server, {
     }
 });
 
+app.set('io', io);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes are protected internally by the route handlers

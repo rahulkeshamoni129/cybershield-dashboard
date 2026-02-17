@@ -158,6 +158,18 @@ const socketManager = (io) => {
             console.error('Socket Loop Error:', error.message);
         }
     }, 6000);
+
+    // Periodically re-sync with DB (Every 10 minutes) to keep "Top Sources" and offsets fresh
+    setInterval(async () => {
+        const historicStats = await threatIntelligence.getHistoricStats();
+        if (historicStats) {
+            stats.totalThreats = historicStats.totalThreats;
+            stats.topSources = historicStats.topSources || {};
+            stats.attacksBySeverity = historicStats.attacksBySeverity || stats.attacksBySeverity;
+            stats.criticalAlerts = stats.attacksBySeverity.critical;
+            io.emit('dashboard_stats', stats);
+        }
+    }, 10 * 60 * 1000);
 };
 
 // Helper to update in-memory stats for the dashboard
@@ -204,5 +216,9 @@ function updateStats(attack) {
 }
 
 socketManager.getThreats = () => []; // Legacy support if needed
+
+socketManager.getConnectionCount = (io) => {
+    return io.engine.clientsCount;
+};
 
 module.exports = socketManager;

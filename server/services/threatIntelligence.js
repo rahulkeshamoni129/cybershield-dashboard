@@ -71,8 +71,9 @@ const initialize = async () => {
 
     // Schedule periodic checks (Every hour) to see if we need to fetch new daily data
     setInterval(async () => {
-        console.log('ThreatIntelligence: Running scheduled daily job checks...');
+        console.log('ThreatIntelligence: Running scheduled daily job checks and reloading patterns...');
         await runDailyAbuseIPDBJob();
+        await loadPatterns();
     }, 1000 * 60 * 60); // 1 Hour
 
     patternEngine.isInitialized = true;
@@ -238,7 +239,11 @@ const runOTXSeedJob = async () => {
 const loadPatterns = async () => {
     try {
         console.log('PatternEngine: Learning from historical data...');
-        const allRecords = await DailyBlacklist.find({}).select('countryCode abuseConfidenceScore');
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const allRecords = await DailyBlacklist.find({
+            createdAt: { $gte: sevenDaysAgo }
+        }).select('countryCode abuseConfidenceScore');
 
         if (allRecords.length === 0) {
             console.log('PatternEngine: No history found. Using defaults.');
@@ -317,9 +322,15 @@ const generateSimulatedEvent = async () => {
     const ip = seed ? seed.ip : `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 
     // Pick Country from Pattern Engine
-    const country = patternEngine.countryWeights.length > 0
+    let country = patternEngine.countryWeights.length > 0
         ? patternEngine.countryWeights[Math.floor(Math.random() * patternEngine.countryWeights.length)]
         : (seed && seed.country ? seed.country : 'US');
+
+    // JITTER: 20% of the time, pick a completely different country from a broader list for variety
+    const varietyCountries = ['US', 'CN', 'RU', 'IN', 'DE', 'BR', 'CA', 'FR', 'UK', 'JP', 'KR', 'SG'];
+    if (Math.random() < 0.20) {
+        country = varietyCountries[Math.floor(Math.random() * varietyCountries.length)];
+    }
 
     // Pick random destination country (different from source for variety)
     let destinationCountry;
@@ -372,8 +383,12 @@ const getHistoricStats = async () => {
         if (total === 0) return { totalThreats: 0, topSources: {}, attacksBySeverity: { critical: 0, high: 0, medium: 0, low: 0 } };
 
 
-        // Aggregate Top Sources from REAL-TIME Threat data
+        // Aggregate Top Sources from REAL-TIME Threat data (Last 24h)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
         const countries = await Threat.aggregate([
+            { $match: { timestamp: { $gte: yesterday } } },
             { $group: { _id: "$sourceCountry", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
@@ -386,8 +401,9 @@ const getHistoricStats = async () => {
             }
         });
 
-        // 2. Aggregate Top Sources from DailyBlacklist (Ground Truth)
+        // 2. Aggregate Top Sources from DailyBlacklist (Ground Truth - Last 24h)
         const dailyCountries = await DailyBlacklist.aggregate([
+            { $match: { createdAt: { $gte: yesterday } } },
             { $group: { _id: "$countryCode", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }

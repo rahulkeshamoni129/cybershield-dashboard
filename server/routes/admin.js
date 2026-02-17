@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Incident = require('../models/Incident');
 const { protect, requireRole } = require('../middleware/authMiddleware');
+const socketManager = require('../services/socketManager');
 
 // User Management Routes
 
@@ -93,24 +94,22 @@ router.get('/system-health', protect, requireRole('admin'), async (req, res) => 
     try {
         const os = require('os');
         const userCount = await User.countDocuments({});
-        const incidentCount = await Incident.countDocuments({ status: { $in: ['Open', 'Investigating', 'investigating'] } });
+        const io = req.app.get('io');
+        const activeConnections = socketManager.getConnectionCount(io);
 
-        // Calculate Real Memory Usage
-        const totalMem = os.totalmem();
-        const freeMem = os.freemem();
         // Return structured data
         res.json({
-            status: 'Healthy', // This is still subjective, but you could add logic (e.g. if FreeMem < 10% => 'Critical')
-            uptime: os.uptime(),
+            status: 'Healthy',
+            uptime: Math.floor(process.uptime()), // Seconds since server started
             memoryUsage: {
-                rss: (totalMem - freeMem), // Resident Set Size (Approximated as Used Mem)
-                heapTotal: totalMem,
-                heapUsed: totalMem - freeMem,
+                rss: (os.totalmem() - os.freemem()),
+                heapTotal: os.totalmem(),
+                heapUsed: os.totalmem() - os.freemem(),
                 external: 0
             },
-            cpuLoad: os.loadavg(), // Returns [1min, 5min, 15min] averages
+            cpuLoad: os.loadavg(),
             userCount: userCount,
-            incidentCount: incidentCount,
+            activeConnections: activeConnections,
             platform: os.platform(),
             architecture: os.arch()
         });
