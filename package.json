@@ -1,0 +1,15 @@
+{
+    "name": "cybershield-root",
+    "version": "1.0.0",
+    "description": "Root package for starting both Backend and AI Engine",
+    "scripts": {
+        "start": "concurrently --kill-others -n \"BACKEND,AI\" -c \"blue,yellow\" \"npm start --prefix server\" \"python ai-engine/app.py\"",
+        "install:server": "npm install --prefix server",
+        "install:client": "npm install --prefix client",
+        "install:ai": "pip install -r ai-engine/requirements.txt",
+        "setup": "npm install && npm run install:server && npm run install:client && npm run install:ai"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.0"
+    }
+}
