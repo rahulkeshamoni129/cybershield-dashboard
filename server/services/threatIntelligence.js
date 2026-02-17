@@ -392,10 +392,10 @@ const getHistoricStats = async () => {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
 
-        const threatTotal = await Threat.countDocuments({ timestamp: { $gte: yesterday } });
+        const threatTotal = await Threat.countDocuments();
         // Instead of count all-time daily blacklist, just count today's fetch
         const todayStr = new Date().toISOString().split('T')[0];
-        const dailyTotal = await DailyBlacklist.countDocuments({ fetchDate: todayStr });
+        const dailyTotal = await DailyBlacklist.countDocuments();
 
         const total = threatTotal + dailyTotal;
 
