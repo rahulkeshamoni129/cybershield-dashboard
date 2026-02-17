@@ -88,13 +88,11 @@ router.get('/', async (req, res) => {
         // 2 & 3. Top Sources (Merged)
         const [threatSources, dailySources] = await Promise.all([
             Threat.aggregate([
-                { $match: { timestamp: { $gte: yesterday } } },
                 { $group: { _id: "$sourceCountry", count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 15 }
             ]),
             DailyBlacklist.aggregate([
-                { $match: { fetchDate: new Date().toISOString().split('T')[0] } },
                 { $group: { _id: "$countryCode", count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 15 }

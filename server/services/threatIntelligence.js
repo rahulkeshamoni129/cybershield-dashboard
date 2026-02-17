@@ -403,9 +403,8 @@ const getHistoricStats = async () => {
         if (total === 0) return { totalThreats: 0, topSources: {}, attacksBySeverity: { critical: 0, high: 0, medium: 0, low: 0 } };
 
 
-        // Aggregate Top Sources from REAL-TIME Threat data (Last 24h)
+        // Aggregate Top Sources from REAL-TIME Threat data
         const countries = await Threat.aggregate([
-            { $match: { timestamp: { $gte: yesterday } } },
             { $group: { _id: "$sourceCountry", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
@@ -418,9 +417,8 @@ const getHistoricStats = async () => {
             }
         });
 
-        // 2. Aggregate Top Sources from DailyBlacklist (Ground Truth - Today's Fetch)
+        // 2. Aggregate Top Sources from DailyBlacklist (Ground Truth)
         const dailyCountries = await DailyBlacklist.aggregate([
-            { $match: { fetchDate: todayStr } },
             { $group: { _id: "$countryCode", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
