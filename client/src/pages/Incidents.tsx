@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import MainLayout from '@/components/layout/MainLayout';
 import { generateIncidents, Incident } from '@/data/mockData';
@@ -71,49 +71,60 @@ const Incidents = () => {
   const { token, isAuthenticated, user } = useAuth();
 
   // Fetch Incidents from Backend
-  useEffect(() => {
-    const fetchIncidents = async () => {
-      if (!isAuthenticated || !token) return;
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await fetch(`${apiUrl}/api/incidents`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          // Convert date strings to Date objects
-          const processedData = data.map((item: any) => ({
-            ...item,
-            created: new Date(item.created),
-            // createdAt: new Date(item.created), // Compatibility mappping
-            timeline: item.timeline ? item.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) : []
-          }));
-          setIncidents(processedData);
-        } else {
-          console.error('Failed to fetch incidents');
-        }
-      } catch (error) {
-        console.error('Error fetching incidents:', error);
+  const fetchIncidents = useCallback(async () => {
+    if (!isAuthenticated || !token) return;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/incidents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const processedData = data.map((item: any) => ({
+          ...item,
+          created: new Date(item.created),
+          timeline: item.timeline ? item.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) : []
+        }));
+        setIncidents(processedData);
       }
-    };
-
-    fetchIncidents();
-
-    // Fetch Total Threats count for the "Open" display
-    const fetchTotalStats = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/analytics`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        setTotalThreats(data.totalAttacks || 50);
-      } catch (err) {
-        console.error("Failed to fetch total stats:", err);
-      }
-    };
-    fetchTotalStats();
+    } catch (error) {
+      console.error('Error fetching incidents:', error);
+    }
   }, [token, isAuthenticated]);
+
+  // Fetch Incident Stats for the header cards
+  const fetchStats = useCallback(async () => {
+    if (!isAuthenticated || !token) return;
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/incidents/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setStats(prev => ({
+        ...prev,
+        open: data.open || 0,
+        investigating: data.investigating || 0,
+        resolved: data.resolved || 0,
+        critical: data.critical || 0,
+      }));
+      setTotalThreats(data.totalThreats || 0);
+    } catch (err) {
+      console.error("Failed to fetch incident stats:", err);
+    }
+  }, [token, isAuthenticated]);
+
+  useEffect(() => {
+    fetchIncidents();
+    fetchStats();
+  }, [fetchIncidents, fetchStats]);
+
+  const [stats, setStats] = useState({
+    open: 0,
+    investigating: 0,
+    resolved: 0,
+    critical: 0,
+  });
 
   const handleCreateIncident = async () => {
     if (!newIncidentData.title) {
@@ -144,6 +155,7 @@ const Incidents = () => {
           }))
         };
         setIncidents([processed, ...incidents]);
+        setStats(prev => ({ ...prev, open: prev.open + 1 }));
         setTotalThreats(prev => prev + 1);
         setIsCreateDialogOpen(false);
         setNewIncidentData({ title: '', description: '', severity: 'Medium' });
@@ -193,6 +205,9 @@ const Incidents = () => {
         const updated = await response.json();
         setIncidents(incidents.map((i) => (i.id === updated.id ? { ...updated, created: new Date(updated.created), timeline: updated.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) } : i)));
         setSelectedIncident({ ...updated, created: new Date(updated.created), timeline: updated.timeline.map((t: any) => ({ ...t, timestamp: new Date(t.timestamp) })) });
+
+        // Refresh stats from server for accuracy after status change
+        fetchStats();
         toast({ title: 'Success', description: `Status updated to ${status}` });
       } else {
         toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
@@ -300,12 +315,7 @@ const Incidents = () => {
       inc.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const stats = {
-    open: incidents.filter((i) => i.status.toLowerCase() === 'open').length,
-    investigating: incidents.filter((i) => i.status.toLowerCase() === 'investigating').length,
-    resolved: incidents.filter((i) => i.status.toLowerCase() === 'resolved').length,
-    critical: incidents.filter((i) => i.severity.toLowerCase() === 'critical').length,
-  };
+
 
   return (
     <MainLayout>
@@ -385,10 +395,21 @@ const Incidents = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-2xl font-bold text-destructive">{totalThreats}</p>
-                  <p className="text-sm text-muted-foreground">Open</p>
+                  <p className="text-2xl font-bold text-destructive">{totalThreats.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">Total Threats</p>
                 </div>
                 <XCircle className="h-8 w-8 text-destructive/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="soc-card">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold text-info">{stats.open}</p>
+                  <p className="text-sm text-muted-foreground">Open Incidents</p>
+                </div>
+                <Clock className="h-8 w-8 text-info/50" />
               </div>
             </CardContent>
           </Card>
@@ -411,17 +432,6 @@ const Incidents = () => {
                   <p className="text-sm text-muted-foreground">Resolved</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-accent/50" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="soc-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-2xl font-bold text-critical">{stats.critical}</p>
-                  <p className="text-sm text-muted-foreground">Critical</p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-critical/50" />
               </div>
             </CardContent>
           </Card>

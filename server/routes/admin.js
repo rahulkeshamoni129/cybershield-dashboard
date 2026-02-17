@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const Incident = require('../models/Incident');
 const { protect, requireRole } = require('../middleware/authMiddleware');
 
 // User Management Routes
@@ -92,6 +93,7 @@ router.get('/system-health', protect, requireRole('admin'), async (req, res) => 
     try {
         const os = require('os');
         const userCount = await User.countDocuments({});
+        const incidentCount = await Incident.countDocuments({ status: { $ne: 'Resolved' } });
 
         // Calculate Real Memory Usage
         const totalMem = os.totalmem();
@@ -108,6 +110,7 @@ router.get('/system-health', protect, requireRole('admin'), async (req, res) => 
             },
             cpuLoad: os.loadavg(), // Returns [1min, 5min, 15min] averages
             userCount: userCount,
+            incidentCount: incidentCount,
             platform: os.platform(),
             architecture: os.arch()
         });

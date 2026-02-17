@@ -15,12 +15,12 @@ services:
     environment:
       - PORT=5000
       - MONGO_URI=mongodb://mongo:27017/cybershield
-      - REDIS_URL=redis://redis:6379
+#      - REDIS_URL=redis://redis:6379
       - AI_ENGINE_URL=http://ai-engine:5001
       - JWT_SECRET=supersecretSOCkey123
     depends_on:
       - mongo
-      - redis
+#      - redis
       - ai-engine
     networks:
       - soc-network
@@ -39,10 +39,10 @@ services:
     networks:
       - soc-network
 
-  redis:
-    image: redis:alpine
-    networks:
-      - soc-network
+#  redis:
+#    image: redis:alpine
+#    networks:
+#      - soc-network
 
 networks:
   soc-network:

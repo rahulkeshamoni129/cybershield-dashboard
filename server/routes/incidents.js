@@ -178,5 +178,34 @@ router.post('/:id/notes', async (req, res) => {
     }
 });
 
+// @route   GET /api/incidents/stats
+// @desc    Get counts for incident management dashboard
+router.get('/stats', async (req, res) => {
+    try {
+        const counts = await Promise.all([
+            Incident.countDocuments({ status: { $in: ['Open', 'investigating', 'Investigating'] } }),
+            Incident.countDocuments({ status: { $in: ['investigating', 'Investigating'] } }),
+            Incident.countDocuments({ status: 'Resolved' }),
+            Incident.countDocuments({ severity: 'Critical' })
+        ]);
+
+        // We also want to know how many "LIVE" threats are being treated as incidents
+        const analyticsRes = await fetch(`${req.protocol}://${req.get('host')}/api/analytics`);
+        const analyticsData = await analyticsRes.json();
+        const totalThreats = analyticsData.totalAttacks || 0;
+
+        res.json({
+            open: counts[0],
+            investigating: counts[1],
+            resolved: counts[2],
+            critical: counts[3],
+            totalThreats: totalThreats
+        });
+    } catch (error) {
+        console.error('Error fetching incident stats:', error);
+        res.status(500).json({ message: 'Error fetching stats' });
+    }
+});
+
 module.exports = router;
 

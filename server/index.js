@@ -6,7 +6,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { Server } = require('socket.io');
-const { createClient } = require('redis');
 const connectDB = require('./config/db');
 const socketManager = require('./services/socketManager');
 const threatRoutes = require('./routes/threats');
@@ -29,17 +28,6 @@ app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
-
-// Redis Client
-const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://redis:6379'
-});
-redisClient.on('error', (err) => {
-    // console.log('Redis Client Error', err)
-});
-// redisClient.connect().catch(console.error);
-redisClient.connect().catch((err) => console.log('Redis connection error:', err.message));
-app.set('redisClient', redisClient);
 
 // Socket.IO Setup
 const io = new Server(server, {
@@ -90,7 +78,7 @@ const startServer = async () => {
 
         // Initialize Socket Manager (Real-time Engine) after DB attempt
         // Ideally we only run this if DB connected, or make it resilient
-        socketManager(io, redisClient);
+        socketManager(io);
 
         server.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);

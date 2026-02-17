@@ -18,7 +18,7 @@ let stats = {
 const networkRouter = require('../routes/network');
 
 
-const socketManager = (io, redisClient) => {
+const socketManager = (io) => {
     // Initialize the Threat Intelligence Service (Part 1, 2, 3)
     threatIntelligence.initialize().then(async () => {
         // 1. Sync "Total Threats" and distribution from DB
@@ -157,7 +157,7 @@ const socketManager = (io, redisClient) => {
         } catch (error) {
             console.error('Socket Loop Error:', error.message);
         }
-    }, 3000);
+    }, 6000);
 };
 
 // Helper to update in-memory stats for the dashboard
