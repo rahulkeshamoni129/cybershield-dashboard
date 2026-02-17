@@ -163,6 +163,7 @@ const socketManager = (io) => {
     setInterval(async () => {
         const historicStats = await threatIntelligence.getHistoricStats();
         if (historicStats) {
+            console.log(`[SocketManager] Syncing stats with DB. Top Sources count: ${Object.keys(historicStats.topSources).length}`);
             stats.totalThreats = historicStats.totalThreats;
             stats.topSources = historicStats.topSources || {};
             stats.attacksBySeverity = historicStats.attacksBySeverity || stats.attacksBySeverity;

@@ -43,6 +43,8 @@ let patternEngine = {
     countryWeights: [],
     severityWeights: [],
     attackTypes: ['DDoS', 'Phishing', 'Malware', 'Brute Force', 'SQL Injection'],
+    currentHotRegion: null,
+    lastRegionRotation: 0,
     isInitialized: false
 };
 
@@ -321,14 +323,24 @@ const generateSimulatedEvent = async () => {
     // Fallback IP/Country if not settled yet
     const ip = seed ? seed.ip : `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 
-    // Pick Country from Pattern Engine
-    let country = patternEngine.countryWeights.length > 0
-        ? patternEngine.countryWeights[Math.floor(Math.random() * patternEngine.countryWeights.length)]
-        : (seed && seed.country ? seed.country : 'US');
+    // Pick Country with HOT REGION logic
+    const now = Date.now();
+    if (!patternEngine.currentHotRegion || (now - patternEngine.lastRegionRotation > 15 * 60 * 1000)) {
+        const regions = ['RU', 'CN', 'KP', 'IR', 'BR', 'UA', 'VN', 'RO', 'NL', 'HK'];
+        patternEngine.currentHotRegion = regions[Math.floor(Math.random() * regions.length)];
+        patternEngine.lastRegionRotation = now;
+        console.log(`PatternEngine: Rotating hot region to ${patternEngine.currentHotRegion}`);
+    }
 
-    // JITTER: 20% of the time, pick a completely different country from a broader list for variety
-    const varietyCountries = ['US', 'CN', 'RU', 'IN', 'DE', 'BR', 'CA', 'FR', 'UK', 'JP', 'KR', 'SG'];
-    if (Math.random() < 0.20) {
+    let country;
+    // 40% chance of hot region, 40% pattern engine, 20% random variety
+    const roll = Math.random();
+    if (roll < 0.40) {
+        country = patternEngine.currentHotRegion;
+    } else if (roll < 0.80 && patternEngine.countryWeights.length > 0) {
+        country = patternEngine.countryWeights[Math.floor(Math.random() * patternEngine.countryWeights.length)];
+    } else {
+        const varietyCountries = ['US', 'CN', 'RU', 'IN', 'DE', 'BR', 'CA', 'FR', 'UK', 'JP', 'KR', 'SG', 'AU', 'NL'];
         country = varietyCountries[Math.floor(Math.random() * varietyCountries.length)];
     }
 
@@ -375,8 +387,16 @@ const getHistoricThreatCount = async () => {
 
 const getHistoricStats = async () => {
     try {
-        const threatTotal = await Threat.countDocuments();
-        const dailyTotal = await DailyBlacklist.countDocuments();
+        // Strictly count only the last 24h for the "Total" in the dashboard stats object
+        // to prevent large historical values from drowning out the live feel
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const threatTotal = await Threat.countDocuments({ timestamp: { $gte: yesterday } });
+        // Instead of count all-time daily blacklist, just count today's fetch
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dailyTotal = await DailyBlacklist.countDocuments({ fetchDate: todayStr });
+
         const total = threatTotal + dailyTotal;
 
         // If no data at all, return default stats structure
@@ -384,9 +404,6 @@ const getHistoricStats = async () => {
 
 
         // Aggregate Top Sources from REAL-TIME Threat data (Last 24h)
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-
         const countries = await Threat.aggregate([
             { $match: { timestamp: { $gte: yesterday } } },
             { $group: { _id: "$sourceCountry", count: { $sum: 1 } } },
@@ -401,9 +418,9 @@ const getHistoricStats = async () => {
             }
         });
 
-        // 2. Aggregate Top Sources from DailyBlacklist (Ground Truth - Last 24h)
+        // 2. Aggregate Top Sources from DailyBlacklist (Ground Truth - Today's Fetch)
         const dailyCountries = await DailyBlacklist.aggregate([
-            { $match: { createdAt: { $gte: yesterday } } },
+            { $match: { fetchDate: todayStr } },
             { $group: { _id: "$countryCode", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
             { $limit: 10 }
