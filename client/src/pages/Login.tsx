@@ -150,12 +150,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Demo credentials */}
-        <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border">
-          <p className="text-xs text-muted-foreground text-center">
-            <span className="text-primary font-medium">Demo Mode:</span> Use registered credentials.
-          </p>
-        </div>
+
       </div>
     </div>
   );
