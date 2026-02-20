@@ -123,7 +123,7 @@ router.get('/', async (req, res) => {
         const typePromise = Threat.aggregate([
             { $group: { _id: "$attackType", count: { $sum: 1 } } },
             { $sort: { count: -1 } },
-            { $limit: 8 }
+            { $limit: 15 }
         ]);
 
         // Execute remaining aggregations

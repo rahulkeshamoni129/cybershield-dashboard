@@ -248,7 +248,11 @@ const Dashboard = () => {
         if (idx !== -1) {
           newTypes[idx].value += 1;
         } else {
-          newTypes.push({ name: typeName, value: 1, color: '#82ca9d' });
+          newTypes.push({
+            name: typeName,
+            value: 1,
+            color: TYPE_COLORS[newTypes.length % TYPE_COLORS.length]
+          });
         }
         return newTypes;
       });
