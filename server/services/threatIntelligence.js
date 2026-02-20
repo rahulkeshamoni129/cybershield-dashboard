@@ -503,7 +503,7 @@ const getHistoricStats = async () => {
 
         // Add ground truth total as a generic category if it exists
         if (dailyTotal > 0) {
-            typeDistribution['Information Gathering'] = (typeDistribution['Information Gathering'] || 0) + dailyTotal;
+            typeDistribution['Reconnaissance'] = (typeDistribution['Reconnaissance'] || 0) + dailyTotal;
         }
 
         return {
