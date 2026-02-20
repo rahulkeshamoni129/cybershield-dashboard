@@ -181,8 +181,8 @@ const runOTXSeedJob = async () => {
         }
 
         console.log('OTX: Fetching seeds...');
-        // Using 'subscribed' pulses
-        const response = await axios.get('https://otx.alienvault.com/api/v1/pulses/subscribed?limit=20', {
+        // Using 'subscribed' pulses - increased limit to 200 for more variety
+        const response = await axios.get('https://otx.alienvault.com/api/v1/pulses/subscribed?limit=200', {
             headers: { 'X-OTX-API-KEY': apiKey }
         });
 
@@ -222,10 +222,10 @@ const runOTXSeedJob = async () => {
 
         await OTXSeed.bulkWrite(bulkOps);
 
-        // MongoDB Free Tier Protection: Cap at 500 seeds for variety without bloat
+        // MongoDB Free Tier Protection: Cap at 2000 seeds for variety without bloat
         const count = await OTXSeed.countDocuments();
-        if (count > 500) {
-            const oldest = await OTXSeed.find().sort({ _id: 1 }).limit(count - 500);
+        if (count > 2000) {
+            const oldest = await OTXSeed.find().sort({ updatedAt: 1 }).limit(count - 2000);
             await OTXSeed.deleteMany({ _id: { $in: oldest.map(d => d._id) } });
         }
 
@@ -285,7 +285,6 @@ const loadPatterns = async () => {
  */
 const getRandomSeed = async () => {
     // Pick a random seed from DB
-    // For performance, we could cache this, but let's count() and skip()
     try {
         const count = await OTXSeed.countDocuments();
         if (count === 0) return null;
@@ -311,17 +310,15 @@ const generateSimulatedEvent = async () => {
         dataSource = 'AlienVault Reflected';
     }
     // 3. Fallback/Demo Mode: If no real seed, inject a "Mock AlienVault" 30% of the time
-    // This ensures the user SEES the label even if their OTX API key is missing or DB is empty.
     else if (Math.random() < 0.7) {
         dataSource = 'AlienVault Reflected';
-        // Mock a seed structure
         seed = {
-            ip: `198.51.100.${Math.floor(Math.random() * 255)}`, // TEST-NET-2 range
-            country: 'US' // Default to US for mock
+            ip: `198.51.100.${Math.floor(Math.random() * 255)}`,
+            country: 'US'
         };
     }
 
-    // Fallback IP/Country if not settled yet
+    // Use seed details
     const ip = seed ? seed.ip : `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 
     // Pick Country with HOT REGION logic
