@@ -180,14 +180,28 @@ const runOTXSeedJob = async () => {
             return;
         }
 
-        console.log('OTX: Fetching seeds...');
-        // Using 'subscribed' pulses - increased limit to 200 for more variety
-        const response = await axios.get('https://otx.alienvault.com/api/v1/pulses/subscribed?limit=200', {
-            headers: { 'X-OTX-API-KEY': apiKey }
-        });
+        console.log('OTX: Fetching seeds from multiple sources...');
+        let pulses = [];
 
-        const pulses = response.data.results;
-        if (!pulses) return;
+        // 1. Fetch first 2 pages of Subscribed pulses
+        for (let page = 1; page <= 2; page++) {
+            const res = await axios.get(`https://otx.alienvault.com/api/v1/pulses/subscribed?limit=100&page=${page}`, {
+                headers: { 'X-OTX-API-KEY': apiKey }
+            });
+            if (res.data.results) pulses = pulses.concat(res.data.results);
+        }
+
+        // 2. Fetch recent community Activity for even more variety
+        try {
+            const resActivity = await axios.get('https://otx.alienvault.com/api/v1/pulses/activity?limit=50', {
+                headers: { 'X-OTX-API-KEY': apiKey }
+            });
+            if (resActivity.data.results) pulses = pulses.concat(resActivity.data.results);
+        } catch (e) {
+            console.log('OTX: Activity endpoint skipped.');
+        }
+
+        if (!pulses || pulses.length === 0) return;
 
         let seeds = [];
         for (const pulse of pulses) {
@@ -208,7 +222,7 @@ const runOTXSeedJob = async () => {
 
         if (seeds.length === 0) return;
 
-        console.log(`OTX: Found ${seeds.length} seeds. Updating DB...`);
+        console.log(`OTX: Gathered ${seeds.length} indicators from ${pulses.length} pulses. Updating DB...`);
 
         // Simple strategy: Replace old seeds to keep it fresh and lightweight?
         // Or Upsert. Let's Upsert.
