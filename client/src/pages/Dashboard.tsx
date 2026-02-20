@@ -264,7 +264,7 @@ const Dashboard = () => {
     <MainLayout>
       <div className="space-y-6 pb-8">
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold gradient-text">Security Operations Center</h1>
             <p className="text-muted-foreground mt-1">
@@ -287,7 +287,7 @@ const Dashboard = () => {
         </div>
 
         {/* 1. KPI Tiles (Heads-Up Display) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
           <StatCard title="Total Threats" value={stats.totalThreats.toLocaleString()} icon={Shield} variant="primary" />
           <StatCard title="Active Threats" value={stats.activeThreats} icon={Target} variant="destructive" />
           <StatCard title="Blocked Attacks" value={stats.blockedAttacks.toLocaleString()} icon={ShieldCheck} variant="accent" />
