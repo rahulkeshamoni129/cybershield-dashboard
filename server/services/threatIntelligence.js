@@ -490,10 +490,27 @@ const getHistoricStats = async () => {
             else if (b._id === 91) attacksBySeverity.critical += b.count;
         });
 
+        // 5. Aggregate Attack Types from Threat data
+        const typesAgg = await Threat.aggregate([
+            { $group: { _id: "$attackType", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }
+        ]);
+
+        const typeDistribution = {};
+        typesAgg.forEach(t => {
+            if (t._id) typeDistribution[t._id] = t.count;
+        });
+
+        // Add ground truth total as a generic category if it exists
+        if (dailyTotal > 0) {
+            typeDistribution['Information Gathering'] = (typeDistribution['Information Gathering'] || 0) + dailyTotal;
+        }
+
         return {
             totalThreats: total,
             topSources,
-            attacksBySeverity
+            attacksBySeverity,
+            typeDistribution
         };
 
     } catch (error) {

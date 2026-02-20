@@ -44,6 +44,7 @@ const AttackTypePie = ({ data }: AttackTypePieProps) => {
               innerRadius={60}
               outerRadius={80}
               paddingAngle={5}
+              minAngle={15}
               dataKey="value"
             >
               {data.map((entry: any, index: number) => (

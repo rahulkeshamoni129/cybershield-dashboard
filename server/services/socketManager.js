@@ -31,17 +31,12 @@ const socketManager = (io) => {
             // Merge Top Sources
             stats.topSources = historicStats.topSources || {};
 
-            // Merge Severity
+            // 3. Merge Severity
             stats.attacksBySeverity = historicStats.attacksBySeverity || stats.attacksBySeverity;
             stats.criticalAlerts = stats.attacksBySeverity.critical;
 
-            // Initialize Types (Simulated distribution based on total, since types are not strictly in DB)
-            // This ensures the "Attacks by Type" chart isn't empty on load
-            const types = ['DDoS', 'Malware', 'Phishing', 'Brute Force'];
-            types.forEach(type => {
-                // Distribute roughly evenly for the baseline
-                stats.typeDistribution[type] = Math.floor(stats.totalThreats / types.length);
-            });
+            // 4. Initialize Types from actual Data
+            stats.typeDistribution = historicStats.typeDistribution || {};
         }
     });
 
