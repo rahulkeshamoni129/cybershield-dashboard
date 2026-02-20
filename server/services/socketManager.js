@@ -12,11 +12,6 @@ let stats = {
     typeDistribution: {},
     topSources: {}, // Will be populated dynamically
     attacksBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
-    statsTrends: {
-        totalThreats: { value: 0, isPositive: true },
-        activeThreats: { value: 0, isPositive: true },
-        blockedAttacks: { value: 0, isPositive: true }
-    },
     history: Array.from({ length: 24 }, (_, i) => ({ hour: `${i}:00`, attacks: 0, blocked: 0 }))
 };
 
@@ -39,7 +34,6 @@ const socketManager = (io) => {
             // Merge Severity
             stats.attacksBySeverity = historicStats.attacksBySeverity || stats.attacksBySeverity;
             stats.criticalAlerts = stats.attacksBySeverity.critical;
-            stats.statsTrends = historicStats.statsTrends || stats.statsTrends;
 
             // Initialize Types (Simulated distribution based on total, since types are not strictly in DB)
             // This ensures the "Attacks by Type" chart isn't empty on load
@@ -174,7 +168,6 @@ const socketManager = (io) => {
             stats.topSources = historicStats.topSources || {};
             stats.attacksBySeverity = historicStats.attacksBySeverity || stats.attacksBySeverity;
             stats.criticalAlerts = stats.attacksBySeverity.critical;
-            stats.statsTrends = historicStats.statsTrends || stats.statsTrends;
             io.emit('dashboard_stats', stats);
         }
     }, 10 * 60 * 1000);
