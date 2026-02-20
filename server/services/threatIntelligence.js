@@ -75,6 +75,7 @@ const initialize = async () => {
     setInterval(async () => {
         console.log('ThreatIntelligence: Running scheduled daily job checks and reloading patterns...');
         await runDailyAbuseIPDBJob();
+        await runOTXSeedJob(); // Added to periodic check
         await loadPatterns();
     }, 1000 * 60 * 60); // 1 Hour
 

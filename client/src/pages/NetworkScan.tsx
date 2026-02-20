@@ -29,6 +29,7 @@ import {
   XCircle,
   Network,
   Wifi,
+  Search,
 } from 'lucide-react';
 
 import { io } from 'socket.io-client';

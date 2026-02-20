@@ -10,6 +10,6 @@ const OTXSeedSchema = new mongoose.Schema({
     firstSeen: Date,
     lastSeen: Date,
     tags: [String]
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('OTXSeed', OTXSeedSchema);
