@@ -40,7 +40,12 @@ const Dashboard = () => {
     blockedAttacks: 0,
     systemHealth: 98,
     criticalAlerts: 0,
-    globalRiskScore: 0
+    globalRiskScore: 0,
+    trends: {
+      totalThreats: { value: 0, isPositive: true },
+      activeThreats: { value: 0, isPositive: true },
+      blockedAttacks: { value: 0, isPositive: true }
+    }
   });
 
   // Charts Data
@@ -65,13 +70,15 @@ const Dashboard = () => {
         const data = await res.json();
 
         // 1. Core Stats
-        setStats(prev => ({
-          ...prev,
-          totalThreats: data.totalAttacks || 0,
-          globalRiskScore: data.globalRiskScore || 0,
-          // Keep other simulated stats for liveness
-          activeThreats: Math.floor(Math.random() * 20) + 5
-        }));
+        if (data.globalRiskScore) {
+          setStats(prev => ({
+            ...prev,
+            totalThreats: data.totalAttacks || 0,
+            globalRiskScore: data.globalRiskScore,
+            criticalAlerts: (data.severityDistribution?.Critical || 0).toLocaleString(),
+            trends: data.statsTrends || prev.trends
+          }));
+        }
 
         // 2. Trend Data
         if (data.trendData) {
@@ -145,7 +152,8 @@ const Dashboard = () => {
         ...data,
         // Ensure we don't overwrite if not present
         totalThreats: data.totalThreats || prev.totalThreats,
-        globalRiskScore: data.globalRiskScore || prev.globalRiskScore
+        globalRiskScore: data.globalRiskScore || prev.globalRiskScore,
+        trends: data.statsTrends || prev.trends
       }));
 
       // Update incremental data mappings
@@ -287,9 +295,9 @@ const Dashboard = () => {
 
         {/* 1. KPI Tiles (Heads-Up Display) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-          <StatCard title="Total Threats" value={stats.totalThreats.toLocaleString()} icon={Shield} trend={{ value: 12, isPositive: false }} variant="primary" />
-          <StatCard title="Active Threats" value={stats.activeThreats} icon={Target} trend={{ value: 5, isPositive: false }} variant="destructive" />
-          <StatCard title="Blocked Attacks" value={stats.blockedAttacks.toLocaleString()} icon={ShieldCheck} trend={{ value: 18, isPositive: true }} variant="accent" />
+          <StatCard title="Total Threats" value={stats.totalThreats.toLocaleString()} icon={Shield} trend={stats.trends.totalThreats} variant="primary" />
+          <StatCard title="Active Threats" value={stats.activeThreats} icon={Target} trend={stats.trends.activeThreats} variant="destructive" />
+          <StatCard title="Blocked Attacks" value={stats.blockedAttacks.toLocaleString()} icon={ShieldCheck} trend={stats.trends.blockedAttacks} variant="accent" />
           <StatCard title="Global Risk Score" value={`${stats.globalRiskScore}/100`} icon={Activity} variant={stats.globalRiskScore > 50 ? "destructive" : "primary"} />
           <StatCard title="Critical Alerts" value={stats.criticalAlerts} icon={AlertTriangle} variant="destructive" />
           <StatCard title="Events/min" value={Math.floor(Math.random() * 500) + 200} icon={Zap} variant="warning" />
