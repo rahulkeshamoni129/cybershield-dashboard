@@ -12,12 +12,18 @@ interface AttackTypePieProps {
 }
 
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--secondary))',
-  'hsl(var(--accent))',
-  'hsl(var(--destructive))',
-  'hsl(var(--warning))',
-  'hsl(var(--info))'
+  '#A855F7', // Vivid Purple
+  '#3B82F6', // Bright Blue
+  '#10B981', // Emerald Green
+  '#F97316', // Sunset Orange
+  '#EAB308', // Lemon Yellow
+  '#EC4899', // Hot Pink
+  '#06B6D4', // Cyan
+  '#EF4444', // Crimson Red
+  '#6366F1', // Indigo
+  '#14B8A6', // Teal
+  '#F59E0B', // Amber
+  '#475569'  // Deep Slate
 ];
 
 const AttackTypePie = ({ data }: AttackTypePieProps) => {
@@ -40,8 +46,13 @@ const AttackTypePie = ({ data }: AttackTypePieProps) => {
               paddingAngle={5}
               dataKey="value"
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="hsl(var(--card))" strokeWidth={2} />
+              {data.map((entry: any, index: number) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color || COLORS[index % COLORS.length]}
+                  stroke="hsl(var(--card))"
+                  strokeWidth={2}
+                />
               ))}
             </Pie>
             <Tooltip

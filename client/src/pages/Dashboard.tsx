@@ -52,7 +52,20 @@ const Dashboard = () => {
   const [confidenceData, setConfidenceData] = useState<{ range: number; count: number }[]>([]);
 
   // Colors for charts
-  const TYPE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const TYPE_COLORS = [
+    '#A855F7', // Vivid Purple
+    '#3B82F6', // Bright Blue
+    '#10B981', // Emerald Green
+    '#F97316', // Sunset Orange
+    '#EAB308', // Lemon Yellow
+    '#EC4899', // Hot Pink
+    '#06B6D4', // Cyan
+    '#EF4444', // Crimson Red
+    '#6366F1', // Indigo
+    '#14B8A6', // Teal
+    '#F59E0B', // Amber
+    '#475569'  // Deep Slate
+  ];
 
   // Fetch Historical Data from Backend (API)
   useEffect(() => {

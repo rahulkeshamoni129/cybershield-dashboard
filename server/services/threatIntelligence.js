@@ -42,7 +42,18 @@ const getCountryName = (code) => COUNTRY_MAP[code] || code;
 let patternEngine = {
     countryWeights: [],
     severityWeights: [],
-    attackTypes: ['DDoS', 'Phishing', 'Malware', 'Brute Force', 'SQL Injection'],
+    attackTypes: [
+        'Phishing',
+        'Ransomware',
+        'DDoS',
+        'Zero-Day Exploit',
+        'Supply Chain Attack',
+        'Credential Stuffing',
+        'Business Email Compromise (BEC)',
+        'Insider Threat',
+        'API Security Exploit',
+        'SQL Injection'
+    ],
     currentHotRegion: null,
     lastRegionRotation: 0,
     isInitialized: false

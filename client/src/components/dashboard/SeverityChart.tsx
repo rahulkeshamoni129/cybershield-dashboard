@@ -40,7 +40,7 @@ const SeverityChart = ({ distribution }: SeverityChartProps) => {
 
             <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={sortedData} layout="horizontal" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart data={sortedData} layout="horizontal" margin={{ top: 25, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" opacity={0.3} />
                         <XAxis
                             dataKey="name"

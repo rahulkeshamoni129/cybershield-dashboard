@@ -79,7 +79,18 @@ const COUNTRIES: Record<string, [number, number]> = {
     'IL': [31.0461, 34.8516], // Israel
 };
 
-const ATTACK_TYPES = ['DDoS', 'SQL Injection', 'Brute Force', 'Malware', 'Phishing', 'XSS'];
+const ATTACK_TYPES = [
+    'Phishing',
+    'Ransomware',
+    'DDoS',
+    'Zero-Day Exploit',
+    'Supply Chain Attack',
+    'Credential Stuffing',
+    'Business Email Compromise (BEC)',
+    'Insider Threat',
+    'API Security Exploit',
+    'SQL Injection'
+];
 
 export const generateThreats = (count: number): Threat[] => {
     return Array.from({ length: count }).map((_, i) => {

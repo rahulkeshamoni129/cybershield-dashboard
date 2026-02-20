@@ -8,11 +8,16 @@ const mongoose = require('mongoose');
 const mapToMitre = (type) => {
     const t = (type || '').toLowerCase();
     if (t.includes('ddos')) return 'Impact';
-    if (t.includes('sql') || t.includes('injection')) return 'Defense Evasion';
-    if (t.includes('malware') || t.includes('execution')) return 'Execution';
+    if (t.includes('ransomware')) return 'Impact';
     if (t.includes('phishing')) return 'Initial Access';
-    if (t.includes('brute') || t.includes('cred')) return 'Credential Access';
-    if (t.includes('scan') || t.includes('recon')) return 'Reconnaissance';
+    if (t.includes('bec') || t.includes('compromise')) return 'Initial Access';
+    if (t.includes('api security') || t.includes('api exploit')) return 'Initial Access';
+    if (t.includes('sql') || t.includes('injection')) return 'Initial Access';
+    if (t.includes('supply chain')) return 'Initial Access';
+    if (t.includes('zero-day') || t.includes('exploit')) return 'Initial Access';
+    if (t.includes('credential') || t.includes('brute')) return 'Credential Access';
+    if (t.includes('insider')) return 'Exfiltration';
+    if (t.includes('malware') || t.includes('execution')) return 'Execution';
     return 'Reconnaissance'; // Default
 };
 
