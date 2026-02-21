@@ -13,6 +13,24 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { Trash2, UserCog, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface UserData {
     _id: string;
@@ -26,6 +44,13 @@ const UserManagement = () => {
     const { toast } = useToast();
     const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [newUser, setNewUser] = useState({
+        username: '',
+        email: '',
+        password: '',
+        role: 'user'
+    });
 
     const fetchUsers = async () => {
         if (!token) return;
@@ -98,6 +123,33 @@ const UserManagement = () => {
         }
     };
 
+    const handleAddUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${apiUrl}/api/admin/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(newUser)
+            });
+            if (res.ok) {
+                toast({ title: "User created", description: "Successfully added new user" });
+                setIsDialogOpen(false);
+                setNewUser({ username: '', email: '', password: '', role: 'user' });
+                fetchUsers();
+            } else {
+                const data = await res.json();
+                toast({ title: "Error", description: data.message || "Failed to add user", variant: "destructive" });
+            }
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
+        }
+    };
+
     return (
         <MainLayout>
             <div className="space-y-6">
@@ -108,10 +160,80 @@ const UserManagement = () => {
                             Manage system access and roles
                         </p>
                     </div>
-                    <Button>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Add User
-                    </Button>
+
+                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Add User
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] bg-[#0A0A0B] border-[#27272A] text-white">
+                            <DialogHeader>
+                                <DialogTitle>Add New User</DialogTitle>
+                                <DialogDescription className="text-zinc-400">
+                                    Create a new user account with specific permissions.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={handleAddUser}>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="username">Username</Label>
+                                        <Input
+                                            id="username"
+                                            value={newUser.username}
+                                            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                                            placeholder="johndoe"
+                                            required
+                                            className="bg-zinc-900 border-zinc-800 focus:ring-primary/50"
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">Email</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={newUser.email}
+                                            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                            placeholder="john@example.com"
+                                            required
+                                            className="bg-zinc-900 border-zinc-800 focus:ring-primary/50"
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="password">Password</Label>
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            value={newUser.password}
+                                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                            placeholder="••••••••"
+                                            required
+                                            className="bg-zinc-900 border-zinc-800 focus:ring-primary/50"
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="role">Role</Label>
+                                        <Select
+                                            value={newUser.role}
+                                            onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                                        >
+                                            <SelectTrigger className="bg-zinc-900 border-zinc-800">
+                                                <SelectValue placeholder="Select role" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
+                                                <SelectItem value="user">User</SelectItem>
+                                                <SelectItem value="admin">Admin</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="submit" className="w-full">Create User</Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
 
                 <div className="soc-card p-0">
