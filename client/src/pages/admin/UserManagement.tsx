@@ -168,28 +168,28 @@ const UserManagement = () => {
                                 Add User
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px] bg-[#0A0A0B] border-[#27272A] text-white">
+                        <DialogContent className="sm:max-w-[425px] soc-card border-white/10 text-white">
                             <DialogHeader>
-                                <DialogTitle>Add New User</DialogTitle>
+                                <DialogTitle className="text-2xl font-bold gradient-text">Add New User</DialogTitle>
                                 <DialogDescription className="text-zinc-400">
-                                    Create a new user account with specific permissions.
+                                    Create a new user account with specific permissions for the SOC dashboard.
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleAddUser}>
                                 <div className="grid gap-4 py-4">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="username">Username</Label>
+                                        <Label htmlFor="username" className="text-zinc-300">Username</Label>
                                         <Input
                                             id="username"
                                             value={newUser.username}
                                             onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                                             placeholder="johndoe"
                                             required
-                                            className="bg-zinc-900 border-zinc-800 focus:ring-primary/50"
+                                            className="bg-white/5 border-white/10 focus:border-primary/50 transition-all"
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="email">Email</Label>
+                                        <Label htmlFor="email" className="text-zinc-300">Email Address</Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -197,11 +197,11 @@ const UserManagement = () => {
                                             onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                                             placeholder="john@example.com"
                                             required
-                                            className="bg-zinc-900 border-zinc-800 focus:ring-primary/50"
+                                            className="bg-white/5 border-white/10 focus:border-primary/50 transition-all"
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="password">Password</Label>
+                                        <Label htmlFor="password" className="text-zinc-300">Password</Label>
                                         <Input
                                             id="password"
                                             type="password"
@@ -209,27 +209,29 @@ const UserManagement = () => {
                                             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                                             placeholder="••••••••"
                                             required
-                                            className="bg-zinc-900 border-zinc-800 focus:ring-primary/50"
+                                            className="bg-white/5 border-white/10 focus:border-primary/50 transition-all"
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="role">Role</Label>
+                                        <Label htmlFor="role" className="text-zinc-300">User Role</Label>
                                         <Select
                                             value={newUser.role}
                                             onValueChange={(value) => setNewUser({ ...newUser, role: value })}
                                         >
-                                            <SelectTrigger className="bg-zinc-900 border-zinc-800">
+                                            <SelectTrigger className="bg-white/5 border-white/10 focus:border-primary/50 transition-all">
                                                 <SelectValue placeholder="Select role" />
                                             </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-800 text-white">
-                                                <SelectItem value="user">User</SelectItem>
-                                                <SelectItem value="admin">Admin</SelectItem>
+                                            <SelectContent className="bg-[#0c0e1a] border-white/10 text-white">
+                                                <SelectItem value="user">Standard User</SelectItem>
+                                                <SelectItem value="admin">Administrator</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </div>
-                                <DialogFooter>
-                                    <Button type="submit" className="w-full">Create User</Button>
+                                <DialogFooter className="pt-4">
+                                    <Button type="submit" className="w-full shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
+                                        Create User Account
+                                    </Button>
                                 </DialogFooter>
                             </form>
                         </DialogContent>
