@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { fetchWithAuth } from '@/lib/api';
 import MainLayout from '@/components/layout/MainLayout';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -201,13 +202,8 @@ How can I assist you today?`,
     setIsTyping(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/ai/chat`, {
+      const res = await fetchWithAuth('/api/ai/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({ message: messageText }),
       });
 

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useThreatContext } from '@/context/ThreatContext'; // Import hook
 import { useAuth } from '@/context/AuthContext';
+import { fetchWithAuth } from '@/lib/api';
 import {
   Select,
   SelectContent,
@@ -110,13 +111,8 @@ const ThreatFeed = () => {
   const handlePromoteToIncident = async (threat: Threat) => {
     setIsPromoting(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/incidents`, {
+      const response = await fetchWithAuth('/api/incidents', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           title: `${threat.type} from ${threat.source.ip}`,
           description: `Automatic promotion of threat detected at ${threat.timestamp.toLocaleString()}. \nSource: ${threat.source.ip} (${threat.source.country})\nTarget: ${threat.target.ip} (${threat.target.country})`,

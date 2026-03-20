@@ -19,8 +19,8 @@ CyberShield is a comprehensive Security Operations Center (SOC) dashboard design
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/rahulkeshamoni129/cybershield-dashboard.git
-   cd cybershield-dashboard
+   git clone https://github.com/rahulkeshamoni129/-Development-of-Interactive-Cyber-Threat-Visualization-Dashboard-.git
+   cd -Development-of-Interactive-Cyber-Threat-Visualization-Dashboard-
    ```
 
 2. **Install Dependencies**
@@ -38,7 +38,7 @@ CyberShield is a comprehensive Security Operations Center (SOC) dashboard design
    ```
 
 3. **Environment Setup**
-   Create a `.env` file in the `server` directory and configure your MongoDB URI, Redis URL, and API keys.
+   Create a `.env` file in the `server` directory and configure your MongoDB URI and API keys.
 
 4. **Run the Application**
 

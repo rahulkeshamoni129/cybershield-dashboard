@@ -188,12 +188,12 @@ function updateStats(attack) {
 
     // Severity
     const s = attack.severity;
-    if (s >= 9) {
+    if (s >= 8) {
         stats.attacksBySeverity.critical = (stats.attacksBySeverity.critical || 0) + 1;
         stats.criticalAlerts++;
-    } else if (s >= 7) {
+    } else if (s >= 6) {
         stats.attacksBySeverity.high = (stats.attacksBySeverity.high || 0) + 1;
-    } else if (s >= 4) {
+    } else if (s >= 3) {
         stats.attacksBySeverity.medium = (stats.attacksBySeverity.medium || 0) + 1;
     } else {
         stats.attacksBySeverity.low = (stats.attacksBySeverity.low || 0) + 1;

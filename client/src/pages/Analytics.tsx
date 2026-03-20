@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { io } from 'socket.io-client';
 import { useAuth } from '@/context/AuthContext';
+import { fetchWithAuth } from '@/lib/api';
 
 const Analytics = () => {
   const { token } = useAuth();
@@ -37,10 +38,7 @@ const Analytics = () => {
 
     const fetchAnalytics = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/analytics`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetchWithAuth('/api/analytics');
         const data = await res.json();
 
         // Hourly trend

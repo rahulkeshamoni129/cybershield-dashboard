@@ -29,6 +29,7 @@ import {
   getCountryCoordinates,
 } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
+import { fetchWithAuth } from '@/lib/api';
 
 const Dashboard = () => {
   const { token } = useAuth();
@@ -71,10 +72,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/analytics`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetchWithAuth('/api/analytics');
         const data = await res.json();
 
         // 1. Core Stats

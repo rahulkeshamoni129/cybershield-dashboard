@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { fetchWithAuth } from '@/lib/api';
 import MainLayout from '@/components/layout/MainLayout';
 import { generateIncidents, Incident } from '@/data/mockData';
 import { cn } from '@/lib/utils';
@@ -74,10 +75,7 @@ const Incidents = () => {
   const fetchIncidents = useCallback(async () => {
     if (!isAuthenticated || !token) return;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/incidents`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await fetchWithAuth('/api/incidents');
       if (response.ok) {
         const data = await response.json();
         const processedData = data.map((item: any) => ({
@@ -96,10 +94,7 @@ const Incidents = () => {
   const fetchStats = useCallback(async () => {
     if (!isAuthenticated || !token) return;
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/incidents/stats`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetchWithAuth('/api/incidents/stats');
       const data = await res.json();
       setStats(prev => ({
         ...prev,
@@ -134,13 +129,8 @@ const Incidents = () => {
 
     setIsSubmitting(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/incidents`, {
+      const response = await fetchWithAuth('/api/incidents', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(newIncidentData),
       });
 
@@ -185,13 +175,8 @@ const Incidents = () => {
 
     setIsSubmitting(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/incidents/${selectedIncident.id}/status`, {
+      const response = await fetchWithAuth(`/api/incidents/${selectedIncident.id}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           status,
           title: selectedIncident.title,
@@ -224,13 +209,8 @@ const Incidents = () => {
 
     setIsSubmitting(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/incidents/${selectedIncident.id}/notes`, {
+      const response = await fetchWithAuth(`/api/incidents/${selectedIncident.id}/notes`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           note: noteText,
           title: selectedIncident.title,

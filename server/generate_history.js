@@ -32,12 +32,20 @@ const generateHistory = async () => {
                 createdAt.setHours(hour);
                 createdAt.setMinutes(min);
 
+                // Distribution: 50% Critical(95), 15% High(85), 20% Med(45, 65), 15% Low(20)
+                const rand = Math.random();
+                let score;
+                if (rand < 0.50) score = 95; // Critical
+                else if (rand < 0.65) score = 85; // High
+                else if (rand < 0.85) score = Math.random() > 0.5 ? 65 : 45; // Med
+                else score = 20; // Low
+
                 bulkOps.push({
                     insertOne: {
                         document: {
                             ipAddress: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
                             countryCode: countries[Math.floor(Math.random() * countries.length)],
-                            abuseConfidenceScore: scores[Math.floor(Math.random() * scores.length)],
+                            abuseConfidenceScore: score,
                             fetchDate: dateStr,
                             createdAt: createdAt,
                             fullData: { mock: true }

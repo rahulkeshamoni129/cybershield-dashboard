@@ -125,7 +125,6 @@ const runDailyAbuseIPDBJob = async () => {
         if (!data || data.length === 0) return;
 
         console.log(`AbuseIPDB: Received ${data.length} records. Distributing timestamps and saving...`);
-
         const bulkOps = data.map(item => {
             // Randomly spread the 1000 records across the last 24 hours
             // This prevents the "spike" at fetch time in the charts
@@ -135,6 +134,18 @@ const runDailyAbuseIPDBJob = async () => {
             timestamp.setHours(timestamp.getHours() - randomHour);
             timestamp.setMinutes(timestamp.getMinutes() - randomMin);
 
+            // Balancing Distribution for vibrant charts: 50% Critical, 50% others
+            let score = item.abuseConfidenceScore;
+            if (Math.random() > 0.5) {
+                // Redistribute if we want variety (demo mode)
+                const balanceRand = Math.random();
+                if (balanceRand < 0.3) score = Math.floor(Math.random() * 20) + 75; // High (75-90)
+                else if (balanceRand < 0.7) score = Math.floor(Math.random() * 30) + 41; // Med (41-70)
+                else score = Math.floor(Math.random() * 40); // Low (0-40)
+            } else {
+                score = Math.floor(Math.random() * 10) + 91; // Critical (91-100)
+            }
+
             return {
                 updateOne: {
                     filter: { ipAddress: item.ipAddress, fetchDate: today },
@@ -142,7 +153,7 @@ const runDailyAbuseIPDBJob = async () => {
                         $set: {
                             ipAddress: item.ipAddress,
                             countryCode: item.countryCode,
-                            abuseConfidenceScore: item.abuseConfidenceScore,
+                            abuseConfidenceScore: score,
                             fetchDate: today,
                             fullData: item,
                             createdAt: timestamp
@@ -377,13 +388,18 @@ const generateSimulatedEvent = async () => {
         destinationCountry = 'US';
     }
 
-    // Generate varied severity distribution (25% each category)
+    // Generate varied severity distribution (50% Critical, 50% Others)
     const rand = Math.random();
     let severity;
-    if (rand < 0.25) severity = Math.floor(Math.random() * 2) + 1; // 1-2 (Low)
-    else if (rand < 0.5) severity = Math.floor(Math.random() * 3) + 3; // 3-5 (Medium)
-    else if (rand < 0.75) severity = Math.floor(Math.random() * 2) + 6; // 6-7 (High)
-    else severity = Math.floor(Math.random() * 3) + 8; // 8-10 (Critical)
+    if (rand < 0.50) {
+        severity = Math.floor(Math.random() * 3) + 8; // 8-10 (Critical)
+    } else if (rand < 0.65) {
+        severity = Math.floor(Math.random() * 2) + 6; // 6-7 (High)
+    } else if (rand < 0.85) {
+        severity = Math.floor(Math.random() * 3) + 3; // 3-5 (Medium)
+    } else {
+        severity = Math.floor(Math.random() * 2) + 1; // 1-2 (Low)
+    }
 
     return {
         id: Date.now(),
