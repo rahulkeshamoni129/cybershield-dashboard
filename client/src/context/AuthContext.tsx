@@ -33,31 +33,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
-        // Clear any other session specific data
         window.dispatchEvent(new Event('auth-state-changed'));
     };
 
     useEffect(() => {
-        // Initial session restoration
         const storedUser = localStorage.getItem('user');
         const storedToken = localStorage.getItem('token');
 
         if (storedUser && storedToken) {
             try {
-                // Quick check for token expiration if possible
                 const payload = JSON.parse(atob(storedToken.split('.')[1]));
                 const expirationDate = payload.exp * 1000;
                 
                 if (Date.now() >= expirationDate) {
-                    console.warn("Session already expired on mount.");
                     logout();
                 } else {
                     const parsedUser = JSON.parse(storedUser);
                     setUser({ ...parsedUser, token: storedToken });
                     
-                    // Set a timer to logout when token expires
                     const timeout = expirationDate - Date.now();
-                    const timer = setTimeout(() => {
+                    setTimeout(() => {
                         toast({
                             title: "Session Expired",
                             description: "Your session has timed out. Please log in again.",
@@ -65,8 +60,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         });
                         logout();
                     }, timeout);
-                    
-                    return () => clearTimeout(timer);
                 }
             } catch (e) {
                 console.error("Failed to restore session", e);
@@ -76,7 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
     }, []);
 
-    // Global listener for 401 Unauthorized errors from anywhere in the app
     useEffect(() => {
         const handleUnauthorized = () => {
             if (user) {
@@ -99,7 +91,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('token', userData.token);
         window.dispatchEvent(new Event('auth-state-changed'));
         
-        // Setup timer for the newly logged in session
         try {
             const payload = JSON.parse(atob(userData.token.split('.')[1]));
             const timeout = (payload.exp * 1000) - Date.now();
@@ -113,9 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     logout();
                 }, timeout);
             }
-        } catch (e) {
-            // If decoding fails, we rely on 401 responses
-        }
+        } catch (e) {}
     };
 
     const updateUser = (updates: Partial<User>) => {
