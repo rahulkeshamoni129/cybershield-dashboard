@@ -44,13 +44,13 @@ const Register = () => {
             const data = await res.json();
 
             if (res.ok) {
-                // Optionally auto-login, or redirect to Login
-                // login(data); // Auto-login
+                // Auto-login on success
+                login(data);
                 toast({
                     title: "Success",
-                    description: "Account created successfully. Please log in.",
+                    description: "Account created successfully. Welcome to CyberShield SOC!",
                 });
-                navigate('/login');
+                navigate('/dashboard');
             } else {
                 toast({
                     title: "Registration Failed",
