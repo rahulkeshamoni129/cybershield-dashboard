@@ -50,7 +50,7 @@ const Register = () => {
                     title: "Success",
                     description: "Account created successfully. Welcome to CyberShield SOC!",
                 });
-                navigate('/dashboard');
+                navigate('/');
             } else {
                 toast({
                     title: "Registration Failed",
